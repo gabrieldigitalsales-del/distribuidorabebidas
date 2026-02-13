@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .checkout-wrap{
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .checkout-card{
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    background: rgba(255,255,255,.9);
+    border: 1px solid rgba(0,0,0,.05);
+  }
+  .cart-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0,0,0,.06);
+  }
+.cart-info{
+    flex: 1;
+    min-width: 0;          /* essencial p/ não estourar */
+  }
+  .cart-info .fw-semibold{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* corta o nome se for grande */
+  }
+  .cart-item:last-child{ border-bottom: 0; }
+
+  .qty-mini{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:6px 10px;
+    border-radius:999px;
+    border: 1px solid rgba(0,0,0,.10);
+    background:#fff;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  .cart-price{
+    min-width: 90px;        /* um pouco menor */
+    text-align: right;
+    font-weight: 700;
+    white-space: nowrap;    /* mantém R$ 3,98 em uma linha */
+    flex: 0 0 auto;
+  }
+
+  .cart-actions{
+    display:flex;
+    gap:10px;
+    margin-top: 14px;
+  }
+
+  @media (max-width: 992px){
+    .cart-actions{
+      flex-direction: column;
+    }
+    .cart-price{
+      min-width: auto;
+    }
+    .qty-mini{
+      min-width: 108px;
+    }
+  }
+</style>
+
+<div class="checkout-wrap">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h4 class="mb-0"><i class="bi bi-basket3"></i> Finalizar pedido</h4>
+      <div class="text-muted">Confira o carrinho e envie no WhatsApp</div>
+    </div>
+    <a class="btn btn-nc" href="{{ url_for('index') }}">
+      <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+  </div>
+
+  <div class="row g-3">
+    <!-- DADOS DO CLIENTE (ESQUERDA) -->
+    <div class="col-12 col-lg-6">
+      <div class="checkout-card p-3" id="formCard">
+        <h6 class="mb-3"><i class="bi bi-person-lines-fill"></i> Dados do cliente</h6>
+
+        <div class="mb-2">
+          <label class="form-label">Nome do cliente</label>
+          <input class="form-control" id="customer_name" placeholder="Seu nome" required>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Endereço</label>
+          <input class="form-control" id="address" placeholder="Rua, número, bairro..." required>
+          <div class="form-text">Endereço da loja: 📍 Av Prefeito Alberto Moura, 15 LJ 5, Sete Lagoas 35702272</div>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">WhatsApp / Telefone</label>
+          <input class="form-control" id="phone" placeholder="(31) 99999-9999" required>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Método de pagamento</label>
+          <select class="form-select" id="payment_method" onchange="toggleChange()">
+            <option value="Pix">Pix</option>
+            <option value="Cartão crédito">Cartão crédito</option>
+            <option value="Cartão débito">Cartão débito</option>
+            <option value="Dinheiro">Dinheiro</option>
+          </select>
+        </div>
+
+        <div class="mb-2" id="changeWrap" style="display:none;">
+          <label class="form-label">Troco para quanto?</label>
+          <input class="form-control" id="change_for" placeholder="Ex: 100,00">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CARRINHO (DIREITA) -->
+    <div class="col-12 col-lg-6">
+      <div class="checkout-card p-3">
+        <h6 class="mb-3"><i class="bi bi-cart-check"></i> Seu carrinho</h6>
+
+        <div id="cartList" class="mb-2"></div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="text-muted">Total</div>
+          <div class="fw-bold fs-5" id="totalText">R$ 0,00</div>
+        </div>
+
+        <div class="cart-actions">
+          <button class="btn btn-outline-secondary w-100" onclick="clearCart()">
+            <i class="bi bi-trash3"></i> Limpar
+          </button>
+
+          <button class="btn btn-success w-100" onclick="sendWhatsApp()">
+            <i class="bi bi-whatsapp"></i> Enviar Pedido
+          </button>
+        </div>
+
+        <div class="text-muted small mt-2">
+          Envia para: <strong id="storeNumberPreview">{{ store_whatsapp }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const CART_KEY = "nc_cart_v1";
+
+  function loadCart(){
+    try { return JSON.parse(localStorage.getItem(CART_KEY) || "{}"); }
+    catch(e){ return {}; }
+  }
+
+  function saveCart(cart){
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    renderCart();
+  }
+
+  function moneyBR(cents){
+    const v = (cents || 0) / 100.0;
+    return "R$ " + v.toFixed(2).replace(".", ",");
+  }
+
+  function clearCart(){
+    localStorage.removeItem(CART_KEY);
+    renderCart();
+  }
+
+  function inc(id){
+    const cart = loadCart();
+    const key = String(id);
+    if(!cart[key]) return;
+    cart[key].qty += 1;
+    saveCart(cart);
+  }
+
+  function dec(id){
+    const cart = loadCart();
+    const key = String(id);
+    if(!cart[key]) return;
+    cart[key].qty -= 1;
+    if(cart[key].qty <= 0) delete cart[key];
+    saveCart(cart);
+  }
+
+  function renderCart(){
+    const cart = loadCart();
+    const list = document.getElementById("cartList");
+    let total = 0;
+
+    const entries = Object.values(cart);
+    if(entries.length === 0){
+      list.innerHTML = `<div class="text-muted">Seu carrinho está vazio.</div>`;
+      document.getElementById("totalText").textContent = moneyBR(0);
+      return;
+    }
+
+    list.innerHTML = "";
+    entries.forEach(it=>{
+      const subtotal = (it.qty || 0) * (it.price_cents || 0);
+      total += subtotal;
+
+      const row = document.createElement("div");
+      row.className = "cart-item";
+
+      row.innerHTML = `
+        <div class="cart-info">
+          <div class="fw-semibold">${it.name || "Item"}</div>
+          <div class="text-muted small">${moneyBR(it.price_cents || 0)} cada</div>
+        </div>
+
+        <div class="qty-mini">
+          <button class="btn btn-sm btn-nc" onclick="dec(${it.id})" aria-label="diminuir">
+            <i class="bi bi-dash-lg"></i>
+          </button>
+          <span class="fw-bold">${it.qty || 0}</span>
+          <button class="btn btn-sm btn-nc" onclick="inc(${it.id})" aria-label="aumentar">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+
+        <div class="cart-price">${moneyBR(subtotal)}</div>
+      `;
+
+      list.appendChild(row);
+    });
+
+    document.getElementById("totalText").textContent = moneyBR(total);
+  }
+
+  function toggleChange(){
+    const pm = (document.getElementById("payment_method").value || "").toLowerCase();
+    document.getElementById("changeWrap").style.display = (pm === "dinheiro") ? "" : "none";
+  }
+
+  async function sendWhatsApp(){
+    const cart = loadCart();
+    const items = Object.values(cart).map(it=>({
+      id: it.id,
+      name: it.name,
+      qty: it.qty,
+      price_cents: it.price_cents
+    })).filter(it=> (it.qty||0) > 0);
+
+    const payload = {
+      customer_name: (document.getElementById("customer_name").value || "").trim(),
+      address: (document.getElementById("address").value || "").trim(),
+      phone: (document.getElementById("phone").value || "").trim(),
+      payment_method: (document.getElementById("payment_method").value || "").trim(),
+      change_for: (document.getElementById("change_for").value || "").trim(),
+      items
+    };
+
+    if(!payload.customer_name || !payload.address || !payload.phone || !payload.payment_method || items.length === 0){
+      alert("Preencha os dados e verifique o carrinho.");
+      return;
+    }
+
+    const res = await fetch("/api/whatsapp_link", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if(!res.ok){
+      alert(data.error || "Erro ao gerar link do WhatsApp.");
+      return;
+    }
+
+    window.location.href = data.link;
+  }
+
+  toggleChange();
+  renderCart();
+</script>
+{% endblock %}

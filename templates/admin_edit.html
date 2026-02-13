@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-pencil-square"></i> Editar produto</h4>
+    <div class="text-muted">Altere preço, promoção, categoria, imagem, status…</div>
+  </div>
+  <a class="btn btn-nc" href="{{ url_for('admin') }}"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+
+<div class="nc-card p-3">
+  <form method="post" enctype="multipart/form-data">
+    <div class="mb-2">
+      <label class="form-label">Nome</label>
+      <input class="form-control" name="name" value="{{ product.name }}" required>
+    </div>
+
+    <div class="mb-2">
+      <label class="form-label">Descrição</label>
+      <input class="form-control" name="description" value="{{ product.description }}">
+    </div>
+
+    <div class="row g-2">
+      <div class="col-6">
+        <label class="form-label">Preço (ex: 9,99)</label>
+        <input class="form-control" name="price" value="{{ '%.2f'|format(product.price) }}" required>
+      </div>
+
+      <div class="col-6">
+        <label class="form-label">Categoria</label>
+        <select class="form-select" name="category_id" required>
+          {% for c in categories %}
+            <option value="{{ c.id }}" {% if product.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-2">
+      <label class="form-label">Imagem do PC (opcional)</label>
+      <input type="file" class="form-control" name="image_file" accept="image/*">
+      {% if product.image_url %}
+        <div class="mt-2">
+          <div class="text-muted small mb-1">Imagem atual:</div>
+          <img src="{{ product.image_url }}" style="max-width:220px;border-radius:14px;border:1px solid rgba(0,0,0,.08);">
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="row g-2 mt-3">
+      <div class="col-6">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="is_active" id="active" {% if product.is_active %}checked{% endif %}>
+          <label class="form-check-label" for="active">Ativo no catálogo</label>
+        </div>
+      </div>
+
+      <div class="col-6">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="is_promo" id="promo" onchange="togglePromoEdit()"
+                 {% if product.is_promo %}checked{% endif %}>
+          <label class="form-check-label" for="promo">Em promoção</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-2" id="promoEditWrap" style="{% if product.is_promo %}{% else %}display:none;{% endif %}">
+      <label class="form-label">Preço promocional (ex: 7,99)</label>
+      <input class="form-control" name="promo_price" value="{{ product.promo_price }}" placeholder="7,99">
+      <div class="form-text">Se marcar promoção, informe o preço promocional.</div>
+    </div>
+
+    <button class="btn btn-primary w-100 mt-3 py-2">
+      <i class="bi bi-check2-circle"></i> Atualizar
+    </button>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  function togglePromoEdit(){
+    const promo = document.getElementById("promo");
+    const wrap = document.getElementById("promoEditWrap");
+    wrap.style.display = promo.checked ? "" : "none";
+  }
+</script>
+{% endblock %}
