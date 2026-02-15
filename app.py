@@ -481,7 +481,7 @@ def api_whatsapp_link():
         f"💳 *Pagamento:* {pay_line}\n\n"
         f"📦 *Itens:*\n" + "\n".join(lines) + "\n\n"
         f"💰 *Total:* {money_br(total_cents)}\n\n"
-        f"✅ Pode confirmar, por favor?"
+        f"✅ Pedido confirmado."
     )
 
     store_number = get_setting("whatsapp_number", STORE_WHATSAPP_NUMBER)
