@@ -61,11 +61,13 @@
       box-shadow: 0 14px 35px rgba(0,0,0,.08);
       background: rgba(255,255,255,.85);
     }
-    .nc-img{
-      height: 170px;
-      width: 100%;
-      object-fit: cover;
-      background: rgba(255,255,255,.7);
+   .nc-img{
+  height: 190px;          /* pode aumentar um pouco */
+  width: 100%;
+  object-fit: contain;    /* ESSA É A MÁGICA */
+  background: #fff;       /* fundo branco fixo */
+  padding: 10px;          /* dá respiro na imagem */
+
     }
     .qty-pill{
       border-radius: 999px;
