@@ -1,4 +1,4 @@
-Flask==3.1.2
-gunicorn==25.1.0
-Pillow
+Flask==3.0.3
+gunicorn==22.0.0
 psycopg[binary]==3.2.6
+Pillow==10.4.0
