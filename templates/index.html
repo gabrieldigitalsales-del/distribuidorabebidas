@@ -203,14 +203,24 @@
     }
   }
 
-  /* Responsivo */
+  /* ====== NOVO: 2 ou 3 PRODUTOS POR LINHA NO CELULAR ======
+     - Em telas pequenas, reduzimos o "gutter" e ajustamos o card pra caber melhor.
+     - O Bootstrap já vai cuidar do grid com as colunas que vamos mudar no HTML.
+  */
+  @media (max-width: 576px){
+    .nc-img{ height: 145px; }
+    .product-section{ --bs-gutter-x: .65rem; --bs-gutter-y: .65rem; }
+    .nc-card .p-3{ padding: .75rem !important; }
+    .qty-pill{ gap: 8px; padding: 6px 8px; }
+  }
+
   @media (max-width: 768px){
     .hero-banner{ height: 420px; padding: 28px; border-radius: 18px; }
     .hero-title{ font-size: 2.35rem; }
     .hero-sub{ font-size: 1.05rem; }
     .hero-top{ left: 16px; top: 14px; }
     .hero-logo{ width:82px; height:82px; }
-    .nc-img{ height: 170px; }
+    .nc-img{ height: 160px; }
     .cat-bar{ top: 62px; }
   }
 </style>
@@ -246,7 +256,7 @@
   </div>
 </div>
 
-<!-- ===== CATEGORIAS ABAIXO DO BANNER (NOVO) ===== -->
+<!-- ===== CATEGORIAS ABAIXO DO BANNER ===== -->
 <div class="cat-bar" id="catBar" aria-label="Categorias">
   <button class="cat-chip active" type="button" data-cat="__all__">
     <i class="bi bi-grid-3x3-gap"></i> Todas
@@ -272,7 +282,8 @@
 
       <div class="row g-3 product-section">
         {% for p in items %}
-          <div class="col-12 col-sm-6 col-lg-4 product-card"
+          <!-- ✅ AQUI É A MUDANÇA: col-6 (2 por linha no celular) + col-md-4 (3 por linha a partir do md) -->
+          <div class="col-6 col-md-4 col-lg-3 product-card"
                data-cat="{{ cat|e }}"
                data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
             <div class="nc-card h-100">
@@ -286,7 +297,7 @@
 
               <div class="p-3">
                 <div class="d-flex justify-content-between align-items-start gap-2">
-                  <div>
+                  <div style="min-width:0;">
                     <h6 class="mb-1">{{ p.name }}</h6>
                     <div class="text-muted small">{{ p.description }}</div>
 
@@ -405,7 +416,7 @@
     window.location.href = "{{ url_for('checkout') }}";
   }
 
-  // ===== FILTRO CATEGORIAS (NOVO) =====
+  // ===== FILTRO CATEGORIAS =====
   function setActiveChip(btn){
     document.querySelectorAll(".cat-chip").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
@@ -429,7 +440,6 @@
     const cat = btn.getAttribute("data-cat");
     setActiveChip(btn);
     filterByCategory(cat);
-    // opcional: volta pro topo do catálogo
     document.getElementById("catalog")?.scrollIntoView({behavior:"smooth", block:"start"});
   });
 
