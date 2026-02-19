@@ -71,6 +71,7 @@
     box-shadow: 0 14px 30px rgba(0,0,0,.20);
     cursor: pointer;
     transition: transform .12s ease, background .12s ease;
+    text-decoration: none;
   }
 
   .hero-address:hover{
@@ -116,10 +117,9 @@
     background: rgba(255,255,255,.85);
     border: 1px solid rgba(0,0,0,.05);
   }
-
   .nc-img{
     width:100%;
-    height:160px;
+    height:180px;
     object-fit:cover;
     display:block;
     background:#f2f2f2;
@@ -128,46 +128,11 @@
   .qty-pill{
     display:flex;
     align-items:center;
-    justify-content: space-between;
     gap:10px;
     padding:6px 10px;
     border-radius: 999px;
     border: 1px solid rgba(0,0,0,.10);
     background: #fff;
-    min-width: 140px;
-  }
-
-  .btn-nc{
-    border-radius: 999px;
-    border: 1px solid rgba(0,0,0,.10);
-    background: rgba(255,255,255,.95);
-  }
-  .btn-nc:hover{ background:#fff; }
-
-  /* Ações do card: no celular vira 2 linhas (pra não cortar o "Adicionar") */
-  .product-actions{
-    display:flex;
-    gap:10px;
-    align-items:center;
-    justify-content: space-between;
-  }
-  .add-btn{
-    white-space: nowrap;
-  }
-
-  @media (max-width: 576px){
-    .product-actions{
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .qty-pill{
-      width: 100%;
-    }
-    .add-btn{
-      width: 100%;
-      justify-content: center;
-    }
-    .nc-img{ height:140px; }
   }
 
   .floating-cart{
@@ -179,13 +144,26 @@
     box-shadow: 0 14px 32px rgba(0,0,0,.18);
   }
 
-  /* Responsivo do hero */
+  /* ===== CATEGORIAS ABAIXO DO BANNER (NOVO) ===== */
+  .category-btn{
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-weight: 600;
+    transition: all .2s ease;
+  }
+  .category-btn.active{
+    background: #000;
+    color: #fff;
+  }
+
+  /* Responsivo */
   @media (max-width: 768px){
     .hero-banner{ height: 420px; padding: 28px; border-radius: 18px; }
     .hero-title{ font-size: 2.35rem; }
     .hero-sub{ font-size: 1.05rem; }
     .hero-top{ left: 16px; top: 14px; }
     .hero-logo{ width:82px; height:82px; }
+    .nc-img{ height: 170px; }
     .hero-address{ font-size: .92rem; padding: 9px 12px; gap: 8px; }
   }
 </style>
@@ -193,6 +171,7 @@
 <div class="hero-banner">
   <div class="hero-overlay"></div>
 
+  <!-- LOGO TOPO -->
   <div class="hero-top">
     <div class="hero-logo">
       <img
@@ -203,6 +182,7 @@
     </div>
   </div>
 
+  <!-- TEXTO CENTRAL -->
   <div class="hero-content">
     <div class="hero-title">
       BEBIDA GELADA<br>EM MINUTOS
@@ -220,7 +200,26 @@
   </div>
 </div>
 
+<!-- ===== CATEGORIAS ABAIXO DO BANNER (NOVO) ===== -->
+<div class="container mt-4">
+  <div class="d-flex flex-wrap gap-2 justify-content-center category-filter">
+
+    <button class="btn btn-outline-dark category-btn active" onclick="filterCategory('all')">
+      Todas
+    </button>
+
+    {% for cat in grouped.keys() %}
+      <button class="btn btn-outline-dark category-btn" onclick="filterCategory('{{ cat }}')">
+        {{ cat }}
+      </button>
+    {% endfor %}
+
+  </div>
+</div>
+
+<!-- CATÁLOGO ABAIXO DO HERO -->
 <div class="mt-4">
+
   {% for cat, items in grouped.items() %}
     <div class="d-flex align-items-center gap-2 mt-4 mb-2">
       <span class="badge badge-cat px-3 py-2">
@@ -228,10 +227,9 @@
       </span>
     </div>
 
-    <!-- ✅ Agora no celular fica 2 por linha: col-6 -->
-    <div class="row g-3 product-section">
+    <div class="row g-3 product-section" data-category="{{ cat }}">
       {% for p in items %}
-        <div class="col-6 col-md-4 col-lg-3 product-card" data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
+        <div class="col-12 col-sm-6 col-lg-4 product-card" data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
           <div class="nc-card h-100">
             {% if p.image_url %}
               <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
@@ -243,9 +241,9 @@
 
             <div class="p-3">
               <div class="d-flex justify-content-between align-items-start gap-2">
-                <div style="min-width:0">
-                  <h6 class="mb-1 text-truncate">{{ p.name }}</h6>
-                  <div class="text-muted small text-truncate">{{ p.description }}</div>
+                <div style="min-width:0;">
+                  <h6 class="mb-1">{{ p.name }}</h6>
+                  <div class="text-muted small">{{ p.description }}</div>
 
                   {% if p.is_promo %}
                     <div class="mt-2">
@@ -266,7 +264,8 @@
                 </div>
               </div>
 
-              <div class="product-actions mt-3">
+              <!-- QUANTIDADE + ADICIONAR -->
+              <div class="d-flex align-items-center justify-content-between mt-3 gap-2">
                 <div class="qty-pill">
                   <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})" aria-label="diminuir">
                     <i class="bi bi-dash-lg"></i>
@@ -279,10 +278,10 @@
                   </button>
                 </div>
 
-                <button class="btn btn-sm btn-nc add-btn d-inline-flex align-items-center gap-2"
+                <button class="btn btn-sm btn-nc"
+                        style="white-space:nowrap;"
                         onclick='addOne({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'>
-                  <i class="bi bi-cart-plus"></i>
-                  <span>Adicionar</span>
+                  <i class="bi bi-cart-plus"></i> Adicionar
                 </button>
               </div>
 
@@ -292,8 +291,10 @@
       {% endfor %}
     </div>
   {% endfor %}
+
 </div>
 
+<!-- BOTÃO CARRINHO FLUTUANTE -->
 <button class="btn btn-primary floating-cart px-4 py-3" onclick="goCheckout()">
   <i class="bi bi-basket3"></i>
   <span class="ms-2">Carrinho:</span>
@@ -357,6 +358,31 @@
 
   function goCheckout(){
     window.location.href = "{{ url_for('checkout') }}";
+  }
+
+  /* ===== FILTRO DE CATEGORIAS (NOVO) ===== */
+  function filterCategory(category){
+    const sections = document.querySelectorAll(".product-section");
+    const buttons = document.querySelectorAll(".category-btn");
+
+    buttons.forEach(btn => btn.classList.remove("active"));
+
+    if(category === 'all'){
+      sections.forEach(sec => sec.style.display = "");
+      document.querySelector("[onclick=\"filterCategory('all')\"]").classList.add("active");
+      return;
+    }
+
+    sections.forEach(sec => {
+      const cat = sec.getAttribute("data-category") || "";
+      sec.style.display = (cat === category) ? "" : "none";
+    });
+
+    buttons.forEach(btn => {
+      if(btn.innerText.trim() === category){
+        btn.classList.add("active");
+      }
+    });
   }
 
   renderCounts();
