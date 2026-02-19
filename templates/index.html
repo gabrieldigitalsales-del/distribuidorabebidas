@@ -53,42 +53,42 @@
     opacity: .98;
   }
 
-.hero-address{
-  margin: 14px auto 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.22);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.02rem;
-  text-shadow: 0 5px 16px rgba(0,0,0,.35);
-  box-shadow: 0 14px 30px rgba(0,0,0,.20);
-  cursor: pointer;
-  transition: transform .12s ease, background .12s ease;
-}
-
-.hero-address:hover{
-  transform: translateY(-1px);
-  background: rgba(0,0,0,.28);
-}
-
-.hero-address i{
-  font-size: 1.15rem;
-}
-
-@media (max-width: 768px){
   .hero-address{
-    font-size: .92rem;
-    padding: 9px 12px;
-    gap: 8px;
+    margin: 14px auto 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.22);
+    border: 1px solid rgba(255,255,255,.22);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.02rem;
+    text-shadow: 0 5px 16px rgba(0,0,0,.35);
+    box-shadow: 0 14px 30px rgba(0,0,0,.20);
+    cursor: pointer;
+    transition: transform .12s ease, background .12s ease;
   }
-}
+
+  .hero-address:hover{
+    transform: translateY(-1px);
+    background: rgba(0,0,0,.28);
+  }
+
+  .hero-address i{
+    font-size: 1.15rem;
+  }
+
+  @media (max-width: 768px){
+    .hero-address{
+      font-size: .92rem;
+      padding: 9px 12px;
+      gap: 8px;
+    }
+  }
 
   /* Logo no topo (esquerda) */
   .hero-top{
@@ -160,7 +160,7 @@
     .hero-sub{ font-size: 1.05rem; }
     .hero-top{ left: 16px; top: 14px; }
     .hero-logo{ width:82px; height:82px; }
-    .nc-img{ height: 170px; }
+    .nc-img{ height: 160px; }
   }
 </style>
 
@@ -186,12 +186,12 @@
     <div class="hero-sub">
       Distribuidora de Bebidas Nova Cidade
     </div>
-<a class="hero-address"
-   href="https://www.google.com/maps/search/?api=1&query=Av%20Prefeito%20Alberto%20Moura%2C%2015%20LJ%205%2C%20Sete%20Lagoas%2035702272"
-   target="_blank" rel="noopener">
-  <i class="bi bi-geo-alt-fill"></i>
-  Av Prefeito Alberto Moura, 15 LJ 5, Sete Lagoas 35702272
-</a>
+    <a class="hero-address"
+       href="https://www.google.com/maps/search/?api=1&query=Av%20Prefeito%20Alberto%20Moura%2C%2015%20LJ%205%2C%20Sete%20Lagoas%2035702272"
+       target="_blank" rel="noopener">
+      <i class="bi bi-geo-alt-fill"></i>
+      Av Prefeito Alberto Moura, 15 LJ 5, Sete Lagoas 35702272
+    </a>
   </div>
 </div>
 
@@ -207,7 +207,8 @@
 
     <div class="row g-3 product-section">
       {% for p in items %}
-        <div class="col-12 col-sm-6 col-lg-4 product-card" data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
+        <!-- AQUI: 2 por linha no celular (col-6) e 3 no PC (col-lg-4) -->
+        <div class="col-6 col-lg-4 product-card" data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
           <div class="nc-card h-100">
             {% if p.image_url %}
               <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
@@ -242,7 +243,7 @@
                 </div>
               </div>
 
-              <!-- QUANTIDADE + ADICIONAR (VOLTOU AQUI) -->
+              <!-- QUANTIDADE + ADICIONAR -->
               <div class="d-flex align-items-center justify-content-between mt-3">
                 <div class="qty-pill">
                   <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})" aria-label="diminuir">
@@ -271,7 +272,7 @@
 
 </div>
 
-<!-- BOTÃO CARRINHO FLUTUANTE (VOLTOU AQUI) -->
+<!-- BOTÃO CARRINHO FLUTUANTE -->
 <button class="btn btn-primary floating-cart px-4 py-3" onclick="goCheckout()">
   <i class="bi bi-basket3"></i>
   <span class="ms-2">Carrinho:</span>
