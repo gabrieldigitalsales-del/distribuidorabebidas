@@ -35,107 +35,37 @@
   }
 
   .hero-title{
-    font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-family: "Poppins", sans-serif;
     font-weight: 800;
     font-size: 3.2rem;
-    letter-spacing: 1px;
     text-transform: uppercase;
     line-height: 1.1;
-    text-shadow: 0 8px 26px rgba(0,0,0,.45);
   }
 
   .hero-sub{
-    font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-family: "Poppins", sans-serif;
     font-weight: 700;
     font-size: 1.25rem;
     margin-top: 12px;
-    text-shadow: 0 5px 16px rgba(0,0,0,.35);
-    opacity: .98;
   }
 
-  .hero-address{
-    margin: 14px auto 0;
-    display: inline-flex;
+  /* ===== CAIXA PADRÃO DA IMAGEM ===== */
+  .nc-media{
+    width: 100%;
+    height: 180px; /* altura da área da imagem */
+    display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(0,0,0,.22);
-    border: 1px solid rgba(255,255,255,.22);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    color: #fff;
-    font-weight: 700;
-    font-size: 1.02rem;
-    text-shadow: 0 5px 16px rgba(0,0,0,.35);
-    box-shadow: 0 14px 30px rgba(0,0,0,.20);
-    cursor: pointer;
-    transition: transform .12s ease, background .12s ease;
-    text-decoration: none;
+    justify-content: center;
+    background: #ffffff;
   }
 
-  .hero-address:hover{
-    transform: translateY(-1px);
-    background: rgba(0,0,0,.28);
-  }
-
-  .hero-address i{
-    font-size: 1.15rem;
-  }
-
-  @media (max-width: 768px){
-    .hero-address{
-      font-size: .92rem;
-      padding: 9px 12px;
-      gap: 8px;
-    }
-  }
-
-  /* Logo no topo (esquerda) */
-  .hero-top{
-    position:absolute;
-    top:18px;
-    left:26px;
-    z-index:3;
-    display:flex;
-    align-items:center;
-    gap:12px;
-  }
-
-  .hero-logo{
-    width:96px;
-    height:96px;
-    border-radius:50%;
-    overflow:hidden;
-    background:white;
-    padding:6px;
-    box-shadow:0 14px 36px rgba(0,0,0,.32);
-  }
-
-  .hero-logo img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    border-radius:50%;
-  }
-
-  /* Cards */
-  .nc-card{
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0,0,0,.08);
-    background: rgba(255,255,255,.85);
-    border: 1px solid rgba(0,0,0,.05);
-  }
-
-  /* ✅ IMAGEM DO PRODUTO: SEMPRE INTEIRA (NUNCA CORTA) */
+  /* ===== IMAGEM FIXA 93x96 ===== */
   .nc-img{
-    width:100%;
-    height:180px;          /* padrão de caixa */
-    object-fit:contain;    /* ✅ mostra inteira */
-    object-position:center;
-    display:block;
-    background:#ffffff;
+    width: 93px !important;
+    height: 96px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block;
   }
 
   .qty-pill{
@@ -157,76 +87,13 @@
     box-shadow: 0 14px 32px rgba(0,0,0,.18);
   }
 
-  /* ===== FILTRO DE CATEGORIAS (ABAIXO DO BANNER) ===== */
-  .cat-bar{
-    position: sticky;
-    top: 68px;
-    z-index: 50;
-    margin-top: 14px;
-    padding: 10px 10px;
-    border-radius: 18px;
-    background: rgba(255,255,255,.75);
-    border: 1px solid rgba(0,0,0,.06);
-    box-shadow: 0 14px 35px rgba(0,0,0,.08);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .cat-chip{
-    border-radius: 999px;
-    border: 1px solid rgba(0,0,0,.10);
-    background: rgba(255,255,255,.9);
-    padding: 8px 14px;
-    font-weight: 700;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: transform .1s ease, background .12s ease;
-  }
-
-  .cat-chip:hover{ transform: translateY(-1px); }
-
-  .cat-chip.active{
-    background: rgba(255,196,0,.95);
-    border-color: rgba(0,0,0,.12);
-  }
-
-  .btn-nc{ white-space: nowrap; }
-
   @media (max-width: 576px){
-    .nc-img{ height: 145px; } /* menor no celular */
-    .product-section{ --bs-gutter-x: .65rem; --bs-gutter-y: .65rem; }
-    .nc-card .p-3{ padding: .75rem !important; }
-    .qty-pill{ gap: 8px; padding: 6px 8px; }
-  }
-
-  @media (max-width: 768px){
-    .hero-banner{ height: 420px; padding: 28px; border-radius: 18px; }
-    .hero-title{ font-size: 2.35rem; }
-    .hero-sub{ font-size: 1.05rem; }
-    .hero-top{ left: 16px; top: 14px; }
-    .hero-logo{ width:82px; height:82px; }
-    .cat-bar{ top: 62px; }
-    .nc-img{ height: 160px; }
+    .nc-media{ height:150px; }
   }
 </style>
 
 <div class="hero-banner">
   <div class="hero-overlay"></div>
-
-  <div class="hero-top">
-    <div class="hero-logo">
-      <img
-        src="{{ url_for('static', filename='brand/logo.png') }}"
-        alt="Logo Nova Cidade"
-        onerror="this.style.display='none'; this.parentElement.style.display='none';"
-      >
-    </div>
-  </div>
 
   <div class="hero-content">
     <div class="hero-title">
@@ -235,31 +102,13 @@
     <div class="hero-sub">
       Distribuidora de Bebidas Nova Cidade
     </div>
-    <a class="hero-address"
-       href="https://www.google.com/maps/search/?api=1&query=Av%20Prefeito%20Alberto%20Moura%2C%2015%20LJ%205%2C%20Sete%20Lagoas%2035702272"
-       target="_blank" rel="noopener">
-      <i class="bi bi-geo-alt-fill"></i>
-      Av Prefeito Alberto Moura, 15 LJ 5, Sete Lagoas 35702272
-    </a>
   </div>
 </div>
 
-<div class="cat-bar" id="catBar" aria-label="Categorias">
-  <button class="cat-chip active" type="button" data-cat="__all__">
-    <i class="bi bi-grid-3x3-gap"></i> Todas
-  </button>
+<div class="mt-4" id="catalog">
 
   {% for cat, items in grouped.items() %}
-    <button class="cat-chip" type="button" data-cat="{{ cat|e }}">
-      <i class="bi bi-tags"></i> {{ cat }}
-    </button>
-  {% endfor %}
-</div>
-
-<div class="mt-3" id="catalog">
-
-  {% for cat, items in grouped.items() %}
-    <div class="category-block" data-cat="{{ cat|e }}">
+    <div class="category-block">
       <div class="d-flex align-items-center gap-2 mt-4 mb-2">
         <span class="badge badge-cat px-3 py-2">
           <i class="bi bi-tags"></i> {{ cat }}
@@ -268,52 +117,39 @@
 
       <div class="row g-3 product-section">
         {% for p in items %}
-          <div class="col-6 col-md-4 col-lg-3 product-card"
-               data-cat="{{ cat|e }}"
-               data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
+          <div class="col-6 col-md-4 col-lg-3">
             <div class="nc-card h-100">
+
               {% if p.image_url %}
-                <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
+                <div class="nc-media">
+                  <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
+                </div>
               {% else %}
-                <div class="nc-img d-flex align-items-center justify-content-center">
+                <div class="nc-media">
                   <i class="bi bi-image text-muted" style="font-size:2rem;"></i>
                 </div>
               {% endif %}
 
               <div class="p-3">
                 <div class="d-flex justify-content-between align-items-start gap-2">
-                  <div style="min-width:0;">
+                  <div>
                     <h6 class="mb-1">{{ p.name }}</h6>
                     <div class="text-muted small">{{ p.description }}</div>
-
-                    {% if p.is_promo %}
-                      <div class="mt-2">
-                        <span class="badge text-bg-warning">
-                          <i class="bi bi-lightning-charge"></i> Promoção
-                        </span>
-                      </div>
-                    {% endif %}
                   </div>
 
                   <div class="text-end">
-                    {% if p.is_promo %}
-                      <div class="text-muted small"><s>{{ p.price }}</s></div>
-                      <div class="fw-bold">{{ p.effective_price }}</div>
-                    {% else %}
-                      <div class="fw-bold">{{ p.price }}</div>
-                    {% endif %}
+                    <div class="fw-bold">{{ p.price }}</div>
                   </div>
                 </div>
 
                 <div class="d-flex align-items-center justify-content-between mt-3 gap-2 flex-wrap">
                   <div class="qty-pill">
-                    <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})" aria-label="diminuir">
+                    <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})">
                       <i class="bi bi-dash-lg"></i>
                     </button>
                     <span class="fw-bold" id="qty-{{ p.id }}">0</span>
                     <button class="btn btn-sm btn-nc"
-                            onclick='inc({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'
-                            aria-label="aumentar">
+                            onclick='inc({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'>
                       <i class="bi bi-plus-lg"></i>
                     </button>
                   </div>
@@ -340,91 +176,4 @@
   <strong class="ms-1" id="cartCount">0</strong>
 </button>
 
-{% endblock %}
-
-{% block scripts %}
-<script>
-  const CART_KEY = "nc_cart_v1";
-
-  function loadCart(){
-    try { return JSON.parse(localStorage.getItem(CART_KEY) || "{}"); }
-    catch(e){ return {}; }
-  }
-  function saveCart(cart){
-    localStorage.setItem(CART_KEY, JSON.stringify(cart));
-    renderCounts();
-  }
-
-  function renderCounts(){
-    const cart = loadCart();
-    let totalItems = 0;
-
-    for (const [id, it] of Object.entries(cart)){
-      const el = document.getElementById("qty-" + id);
-      if (el) el.textContent = it.qty;
-      totalItems += it.qty;
-    }
-
-    document.querySelectorAll("[id^='qty-']").forEach(el=>{
-      const id = el.id.replace("qty-","");
-      if (!cart[id]) el.textContent = "0";
-    });
-
-    const cc = document.getElementById("cartCount");
-    if (cc) cc.textContent = totalItems;
-  }
-
-  function inc(id, name, price_cents){
-    const cart = loadCart();
-    const key = String(id);
-    if(!cart[key]) cart[key] = {id, name, price_cents, qty:0};
-    cart[key].qty += 1;
-    saveCart(cart);
-  }
-
-  function dec(id){
-    const cart = loadCart();
-    const key = String(id);
-    if(!cart[key]) return;
-    cart[key].qty -= 1;
-    if(cart[key].qty <= 0) delete cart[key];
-    saveCart(cart);
-  }
-
-  function addOne(id, name, price_cents){
-    inc(id, name, price_cents);
-  }
-
-  function goCheckout(){
-    window.location.href = "{{ url_for('checkout') }}";
-  }
-
-  function setActiveChip(btn){
-    document.querySelectorAll(".cat-chip").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-  }
-
-  function filterByCategory(cat){
-    const blocks = document.querySelectorAll(".category-block");
-    if(cat === "__all__"){
-      blocks.forEach(b => b.style.display = "");
-      return;
-    }
-    blocks.forEach(b => {
-      const bcat = b.getAttribute("data-cat") || "";
-      b.style.display = (bcat === cat) ? "" : "none";
-    });
-  }
-
-  document.getElementById("catBar")?.addEventListener("click", (e)=>{
-    const btn = e.target.closest(".cat-chip");
-    if(!btn) return;
-    const cat = btn.getAttribute("data-cat");
-    setActiveChip(btn);
-    filterByCategory(cat);
-    document.getElementById("catalog")?.scrollIntoView({behavior:"smooth", block:"start"});
-  });
-
-  renderCounts();
-</script>
 {% endblock %}
