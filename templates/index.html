@@ -71,7 +71,6 @@
     box-shadow: 0 14px 30px rgba(0,0,0,.20);
     cursor: pointer;
     transition: transform .12s ease, background .12s ease;
-    text-decoration: none;
   }
 
   .hero-address:hover{
@@ -79,17 +78,7 @@
     background: rgba(0,0,0,.28);
   }
 
-  .hero-address i{
-    font-size: 1.15rem;
-  }
-
-  @media (max-width: 768px){
-    .hero-address{
-      font-size: .92rem;
-      padding: 9px 12px;
-      gap: 8px;
-    }
-  }
+  .hero-address i{ font-size: 1.15rem; }
 
   /* Logo no topo (esquerda) */
   .hero-top{
@@ -127,9 +116,10 @@
     background: rgba(255,255,255,.85);
     border: 1px solid rgba(0,0,0,.05);
   }
+
   .nc-img{
     width:100%;
-    height:180px;
+    height:160px;
     object-fit:cover;
     display:block;
     background:#f2f2f2;
@@ -138,11 +128,46 @@
   .qty-pill{
     display:flex;
     align-items:center;
+    justify-content: space-between;
     gap:10px;
     padding:6px 10px;
     border-radius: 999px;
     border: 1px solid rgba(0,0,0,.10);
     background: #fff;
+    min-width: 140px;
+  }
+
+  .btn-nc{
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.95);
+  }
+  .btn-nc:hover{ background:#fff; }
+
+  /* Ações do card: no celular vira 2 linhas (pra não cortar o "Adicionar") */
+  .product-actions{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content: space-between;
+  }
+  .add-btn{
+    white-space: nowrap;
+  }
+
+  @media (max-width: 576px){
+    .product-actions{
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .qty-pill{
+      width: 100%;
+    }
+    .add-btn{
+      width: 100%;
+      justify-content: center;
+    }
+    .nc-img{ height:140px; }
   }
 
   .floating-cart{
@@ -154,53 +179,20 @@
     box-shadow: 0 14px 32px rgba(0,0,0,.18);
   }
 
-  /* ===== BARRA DE CATEGORIAS (NOVO) ===== */
-  .cat-bar{
-    margin-top: 14px;
-    padding: 10px 10px;
-    border-radius: 18px;
-    background: rgba(255,255,255,.75);
-    border: 1px solid rgba(0,0,0,.06);
-    box-shadow: 0 14px 35px rgba(0,0,0,.08);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  .cat-chip{
-    border-radius: 999px;
-    border: 1px solid rgba(0,0,0,.10);
-    background: rgba(255,255,255,.9);
-    padding: 8px 14px;
-    font-weight: 700;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: transform .1s ease, background .12s ease;
-  }
-  .cat-chip:hover{ transform: translateY(-1px); }
-  .cat-chip.active{
-    background: rgba(255,196,0,.95);
-    border-color: rgba(0,0,0,.12);
-  }
-
-  /* Responsivo */
+  /* Responsivo do hero */
   @media (max-width: 768px){
     .hero-banner{ height: 420px; padding: 28px; border-radius: 18px; }
     .hero-title{ font-size: 2.35rem; }
     .hero-sub{ font-size: 1.05rem; }
     .hero-top{ left: 16px; top: 14px; }
     .hero-logo{ width:82px; height:82px; }
-    .nc-img{ height: 170px; }
+    .hero-address{ font-size: .92rem; padding: 9px 12px; gap: 8px; }
   }
 </style>
 
 <div class="hero-banner">
   <div class="hero-overlay"></div>
 
-  <!-- LOGO TOPO -->
   <div class="hero-top">
     <div class="hero-logo">
       <img
@@ -211,7 +203,6 @@
     </div>
   </div>
 
-  <!-- TEXTO CENTRAL -->
   <div class="hero-content">
     <div class="hero-title">
       BEBIDA GELADA<br>EM MINUTOS
@@ -219,6 +210,7 @@
     <div class="hero-sub">
       Distribuidora de Bebidas Nova Cidade
     </div>
+
     <a class="hero-address"
        href="https://www.google.com/maps/search/?api=1&query=Av%20Prefeito%20Alberto%20Moura%2C%2015%20LJ%205%2C%20Sete%20Lagoas%2035702272"
        target="_blank" rel="noopener">
@@ -228,100 +220,80 @@
   </div>
 </div>
 
-<!-- ===== CATEGORIAS ABAIXO DO BANNER (NOVO) ===== -->
-<div class="cat-bar" id="catBar">
-  <button class="cat-chip active" type="button" data-cat="__all__">
-    <i class="bi bi-grid-3x3-gap"></i> Todas
-  </button>
-
+<div class="mt-4">
   {% for cat, items in grouped.items() %}
-    <button class="cat-chip" type="button" data-cat={{ cat|tojson }}>
-      <i class="bi bi-tags"></i> {{ cat }}
-    </button>
-  {% endfor %}
-</div>
+    <div class="d-flex align-items-center gap-2 mt-4 mb-2">
+      <span class="badge badge-cat px-3 py-2">
+        <i class="bi bi-tags"></i> {{ cat }}
+      </span>
+    </div>
 
-<!-- CATÁLOGO ABAIXO DO HERO -->
-<div class="mt-3" id="catalog">
+    <!-- ✅ Agora no celular fica 2 por linha: col-6 -->
+    <div class="row g-3 product-section">
+      {% for p in items %}
+        <div class="col-6 col-md-4 col-lg-3 product-card" data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
+          <div class="nc-card h-100">
+            {% if p.image_url %}
+              <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
+            {% else %}
+              <div class="nc-img d-flex align-items-center justify-content-center">
+                <i class="bi bi-image text-muted" style="font-size:2rem;"></i>
+              </div>
+            {% endif %}
 
-  {% for cat, items in grouped.items() %}
-    <div class="category-block" data-cat={{ cat|tojson }}>
-      <div class="d-flex align-items-center gap-2 mt-4 mb-2">
-        <span class="badge badge-cat px-3 py-2">
-          <i class="bi bi-tags"></i> {{ cat }}
-        </span>
-      </div>
+            <div class="p-3">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div style="min-width:0">
+                  <h6 class="mb-1 text-truncate">{{ p.name }}</h6>
+                  <div class="text-muted small text-truncate">{{ p.description }}</div>
 
-      <div class="row g-3 product-section">
-        {% for p in items %}
-          <div class="col-12 col-sm-6 col-lg-4 product-card"
-               data-cat={{ cat|tojson }}
-               data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
-            <div class="nc-card h-100">
-              {% if p.image_url %}
-                <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
-              {% else %}
-                <div class="nc-img d-flex align-items-center justify-content-center">
-                  <i class="bi bi-image text-muted" style="font-size:2rem;"></i>
-                </div>
-              {% endif %}
-
-              <div class="p-3">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                  <div>
-                    <h6 class="mb-1">{{ p.name }}</h6>
-                    <div class="text-muted small">{{ p.description }}</div>
-
-                    {% if p.is_promo %}
-                      <div class="mt-2">
-                        <span class="badge text-bg-warning">
-                          <i class="bi bi-lightning-charge"></i> Promoção
-                        </span>
-                      </div>
-                    {% endif %}
-                  </div>
-
-                  <div class="text-end">
-                    {% if p.is_promo %}
-                      <div class="text-muted small"><s>{{ p.price }}</s></div>
-                      <div class="fw-bold">{{ p.effective_price }}</div>
-                    {% else %}
-                      <div class="fw-bold">{{ p.price }}</div>
-                    {% endif %}
-                  </div>
+                  {% if p.is_promo %}
+                    <div class="mt-2">
+                      <span class="badge text-bg-warning">
+                        <i class="bi bi-lightning-charge"></i> Promoção
+                      </span>
+                    </div>
+                  {% endif %}
                 </div>
 
-                <!-- QUANTIDADE + ADICIONAR (VOLTOU AQUI) -->
-                <div class="d-flex align-items-center justify-content-between mt-3 gap-2 flex-wrap">
-                  <div class="qty-pill">
-                    <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})" aria-label="diminuir">
-                      <i class="bi bi-dash-lg"></i>
-                    </button>
-                    <span class="fw-bold" id="qty-{{ p.id }}">0</span>
-                    <button class="btn btn-sm btn-nc"
-                            onclick='inc({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'
-                            aria-label="aumentar">
-                      <i class="bi bi-plus-lg"></i>
-                    </button>
-                  </div>
+                <div class="text-end">
+                  {% if p.is_promo %}
+                    <div class="text-muted small"><s>{{ p.price }}</s></div>
+                    <div class="fw-bold">{{ p.effective_price }}</div>
+                  {% else %}
+                    <div class="fw-bold">{{ p.price }}</div>
+                  {% endif %}
+                </div>
+              </div>
 
+              <div class="product-actions mt-3">
+                <div class="qty-pill">
+                  <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})" aria-label="diminuir">
+                    <i class="bi bi-dash-lg"></i>
+                  </button>
+                  <span class="fw-bold" id="qty-{{ p.id }}">0</span>
                   <button class="btn btn-sm btn-nc"
-                          onclick='addOne({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'>
-                    <i class="bi bi-cart-plus"></i> Adicionar
+                          onclick='inc({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'
+                          aria-label="aumentar">
+                    <i class="bi bi-plus-lg"></i>
                   </button>
                 </div>
 
+                <button class="btn btn-sm btn-nc add-btn d-inline-flex align-items-center gap-2"
+                        onclick='addOne({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'>
+                  <i class="bi bi-cart-plus"></i>
+                  <span>Adicionar</span>
+                </button>
               </div>
+
             </div>
           </div>
-        {% endfor %}
-      </div>
+        </div>
+      {% endfor %}
     </div>
   {% endfor %}
-
 </div>
 
-<!-- BOTÃO CARRINHO FLUTUANTE (VOLTOU AQUI) -->
 <button class="btn btn-primary floating-cart px-4 py-3" onclick="goCheckout()">
   <i class="bi bi-basket3"></i>
   <span class="ms-2">Carrinho:</span>
@@ -386,33 +358,6 @@
   function goCheckout(){
     window.location.href = "{{ url_for('checkout') }}";
   }
-
-  // ===== FILTRO DE CATEGORIA (NOVO) =====
-  function setActiveChip(btn){
-    document.querySelectorAll(".cat-chip").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-  }
-
-  function filterByCategory(cat){
-    const blocks = document.querySelectorAll(".category-block");
-    if(cat === "__all__"){
-      blocks.forEach(b => b.style.display = "");
-      return;
-    }
-    blocks.forEach(b => {
-      const bcat = b.getAttribute("data-cat") || "";
-      b.style.display = (bcat === cat) ? "" : "none";
-    });
-  }
-
-  document.getElementById("catBar")?.addEventListener("click", (e)=>{
-    const btn = e.target.closest(".cat-chip");
-    if(!btn) return;
-    const cat = btn.getAttribute("data-cat");
-    setActiveChip(btn);
-    filterByCategory(cat);
-    document.getElementById("catalog")?.scrollIntoView({behavior:"smooth", block:"start"});
-  });
 
   renderCounts();
 </script>
