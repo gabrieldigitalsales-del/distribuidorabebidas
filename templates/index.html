@@ -128,28 +128,25 @@
     border: 1px solid rgba(0,0,0,.05);
   }
 
-  /* ===== CAIXA PADRÃO DE IMAGEM (SEM CORTAR, SEM DISTORCER) =====
-     - caixa com altura fixa (padrão visual)
-     - imagem 100% visível com contain
-  */
+  /* ✅ PADRÃO FIXO DA CAIXA DE IMAGEM (NÃO CORTA) */
   .nc-media{
     width: 100%;
-    height: 210px;                 /* <<< PADRÃO (desktop) */
-    background: #ffffff;
+    height: 180px;                /* padrão desktop */
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 10px;                  /* respiro */
-    overflow: hidden;               /* garante que nada vaze */
+    overflow: hidden;
+    padding: 8px;                 /* respiro */
   }
 
-  .nc-media img{
+  .nc-img{
     max-width: 100%;
     max-height: 100%;
     width: auto;
     height: auto;
     display: block;
-    object-fit: contain;            /* <<< NÃO CORTA */
+    object-fit: contain;          /* ✅ 100% visível (sem cortar) */
     object-position: center;
   }
 
@@ -210,19 +207,16 @@
     border-color: rgba(0,0,0,.12);
   }
 
-  .btn-nc{
-    white-space: nowrap;
-  }
+  .btn-nc{ white-space: nowrap; }
 
   @media (max-width: 576px){
+    .nc-media{
+      height: 140px;              /* padrão celular */
+      padding: 6px;
+    }
     .product-section{ --bs-gutter-x: .65rem; --bs-gutter-y: .65rem; }
     .nc-card .p-3{ padding: .75rem !important; }
     .qty-pill{ gap: 8px; padding: 6px 8px; }
-
-    .nc-media{
-      height: 170px;               /* <<< PADRÃO (celular) */
-      padding: 8px;
-    }
   }
 
   @media (max-width: 768px){
@@ -295,7 +289,7 @@
 
               {% if p.image_url %}
                 <div class="nc-media">
-                  <img src="{{ p.image_url }}" alt="{{ p.name }}">
+                  <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
                 </div>
               {% else %}
                 <div class="nc-media">
