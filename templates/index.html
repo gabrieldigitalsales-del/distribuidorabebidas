@@ -128,26 +128,31 @@
     border: 1px solid rgba(0,0,0,.05);
   }
 
-  /* ===== IMAGEM DO PRODUTO (QUADRADA + MOSTRA INTEIRA) ===== */
-/* Área da imagem: altura automática, com limite */
-.nc-media{
-  width: 100%;
-  padding: 12px;              /* respiro */
-  background: #f2f2f2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+  /* ===== IMAGEM: APARECER INTEIRA E REDUZIR ESPAÇO BRANCO =====
+     - Sem aspect-ratio (não força quadrado gigante)
+     - Altura mínima pequena, altura máxima controlada
+     - Imagem inteira (contain), sem esticar
+  */
+  .nc-media{
+    width: 100%;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;              /* menos branco */
+    min-height: 140px;         /* não deixa ficar pequeno demais */
+    max-height: 220px;         /* trava o bloco */
+  }
 
-/* A imagem aparece inteira e define a altura do bloco */
-.nc-media img{
-  width: 100%;
-  height: auto;               /* <<< deixa a altura ser natural */
-  max-height: 220px;          /* <<< limite pra não ficar gigante */
-  object-fit: contain;        /* <<< mostra inteira */
-  object-position: center;
-  display: block;
-}
+  .nc-media img{
+    display: block;
+    max-width: 100%;
+    max-height: 204px;         /* um pouco menor que o container por causa do padding */
+    width: auto;               /* IMPORTANTÍSSIMO pra garrafas finas */
+    height: auto;
+    object-fit: contain;
+    object-position: center;
+  }
 
   .qty-pill{
     display:flex;
@@ -216,6 +221,15 @@
     .product-section{ --bs-gutter-x: .65rem; --bs-gutter-y: .65rem; }
     .nc-card .p-3{ padding: .75rem !important; }
     .qty-pill{ gap: 8px; padding: 6px 8px; }
+
+    .nc-media{
+      padding: 6px;
+      min-height: 120px;
+      max-height: 190px;
+    }
+    .nc-media img{
+      max-height: 178px;
+    }
   }
 
   /* Responsivo geral */
@@ -289,7 +303,6 @@
                data-cat="{{ cat|e }}"
                data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
             <div class="nc-card h-100">
-
               {% if p.image_url %}
                 <div class="nc-media">
                   <img src="{{ p.image_url }}" alt="{{ p.name }}">
