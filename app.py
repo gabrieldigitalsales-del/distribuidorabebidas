@@ -38,7 +38,8 @@ BASE_DIR = os.path.dirname(__file__)
 
 # Se existir DATABASE_URL (Railway Postgres), usa Postgres. Senão, usa SQLite local.
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-DB_PATH = os.path.join(BASE_DIR, "database.sqlite3")
+DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DIR, "database.sqlite3"))
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 # Uploads (IMPORTANTE: no Railway, isso some sem Volume. Pode setar UPLOAD_FOLDER pra volume mount)
 DEFAULT_UPLOAD = os.path.join(BASE_DIR, "static", "uploads")
