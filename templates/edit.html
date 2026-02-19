@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-pencil-square"></i> Editar produto</h4>
+    <div class="text-muted">Atualize dados, promoção e imagem.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-nc" href="{{ url_for('admin') }}">
+      <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+    <a class="btn btn-nc" href="{{ url_for('logout') }}">
+      <i class="bi bi-box-arrow-right"></i> Sair
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="nc-card p-3">
+      <h6 class="mb-3"><i class="bi bi-box-seam"></i> Produto</h6>
+
+      <form method="post" action="{{ url_for('admin_edit_post', pid=p.id) }}" enctype="multipart/form-data">
+
+        <div class="mb-2">
+          <label class="form-label">Nome</label>
+          <input class="form-control" name="name" value="{{ p.name }}" required>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Descrição</label>
+          <input class="form-control" name="description" value="{{ p.description }}">
+        </div>
+
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">Preço (ex: 9,99)</label>
+            <input class="form-control" name="price"
+                   value="{{ (p.price_cents/100)|round(2)|string|replace('.', ',') }}" required>
+          </div>
+
+          <div class="col-6">
+            <label class="form-label">Categoria</label>
+            <select class="form-select" name="category_id" required>
+              {% for c in categories %}
+                <option value="{{ c.id }}" {% if p.category_id == c.id %}selected{% endif %}>
+                  {{ c.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-2">
+          <label class="form-label">Imagem (opcional)</label>
+          <input type="file" class="form-control" name="image_file" accept="image/*">
+          <div class="form-text">Se não enviar, mantém a imagem atual.</div>
+        </div>
+
+        {% if p.image_url %}
+          <div class="mt-3">
+            <div class="text-muted small mb-2">Imagem atual:</div>
+            <img src="{{ p.image_url }}" alt="{{ p.name }}"
+                 style="width:100%; max-width:320px; border-radius:16px; border:1px solid rgba(0,0,0,.06);">
+          </div>
+        {% endif %}
+
+        <div class="row g-2 mt-3">
+          <div class="col-6">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_active" id="active"
+                     {% if p.is_active %}checked{% endif %}>
+              <label class="form-check-label" for="active">Ativo no catálogo</label>
+            </div>
+          </div>
+
+          <div class="col-6">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_promo" id="promo"
+                     {% if p.is_promo %}checked{% endif %}
+                     onchange="togglePromoEdit()">
+              <label class="form-check-label" for="promo">Em promoção</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-2" id="promoEditWrap" style="display:none;">
+          <label class="form-label">Preço promocional (ex: 7,99)</label>
+          <input class="form-control" name="promo_price"
+                 value="{% if p.promo_price_cents %}{{ (p.promo_price_cents/100)|round(2)|string|replace('.', ',') }}{% endif %}"
+                 placeholder="7,99">
+          <div class="form-text">Se marcar promoção, informe um valor menor que o normal.</div>
+        </div>
+
+        <button class="btn btn-primary w-100 mt-3 py-2">
+          <i class="bi bi-check2-circle"></i> Salvar alterações
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="nc-card p-3">
+      <h6 class="mb-2"><i class="bi bi-info-circle"></i> Dica rápida</h6>
+      <div class="text-muted">
+        Se você estiver no Railway sem <strong>Volume</strong>, imagens enviadas pelo admin podem sumir após deploy.
+        Para não sumir:
+        <ul class="mt-2">
+          <li>use URL de imagem (link) em vez de upload, ou</li>
+          <li>configure Volume e a variável <code>UPLOAD_FOLDER</code>.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  function togglePromoEdit(){
+    const promo = document.getElementById("promo");
+    const wrap = document.getElementById("promoEditWrap");
+    wrap.style.display = promo.checked ? "" : "none";
+  }
+  // estado inicial
+  togglePromoEdit();
+</script>
+{% endblock %}
