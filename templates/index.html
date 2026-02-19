@@ -79,7 +79,17 @@
     background: rgba(0,0,0,.28);
   }
 
-  .hero-address i{ font-size: 1.15rem; }
+  .hero-address i{
+    font-size: 1.15rem;
+  }
+
+  @media (max-width: 768px){
+    .hero-address{
+      font-size: .92rem;
+      padding: 9px 12px;
+      gap: 8px;
+    }
+  }
 
   /* Logo no topo (esquerda) */
   .hero-top{
@@ -144,16 +154,53 @@
     box-shadow: 0 14px 32px rgba(0,0,0,.18);
   }
 
-  /* ===== CATEGORIAS ABAIXO DO BANNER (NOVO) ===== */
-  .category-btn{
-    border-radius: 999px;
-    padding: 8px 16px;
-    font-weight: 600;
-    transition: all .2s ease;
+  /* ===== FILTRO DE CATEGORIAS (NOVO) ===== */
+  .cat-bar{
+    position: sticky;
+    top: 68px; /* se sua navbar for diferente, ajusta aqui */
+    z-index: 50;
+    margin-top: 14px;
+    padding: 10px 10px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.75);
+    border: 1px solid rgba(0,0,0,.06);
+    box-shadow: 0 14px 35px rgba(0,0,0,.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    gap: 10px;
+    align-items: center;
   }
-  .category-btn.active{
-    background: #000;
-    color: #fff;
+
+  .cat-chip{
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.9);
+    padding: 8px 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform .1s ease, background .12s ease;
+  }
+
+  .cat-chip:hover{ transform: translateY(-1px); }
+
+  .cat-chip.active{
+    background: rgba(255,196,0,.95);
+    border-color: rgba(0,0,0,.12);
+  }
+
+  /* “Adicionar” não cortar (corrige botão metade) */
+  .btn-nc{
+    white-space: nowrap;
+  }
+  @media (max-width: 420px){
+    .btn-nc{
+      padding-left: .6rem;
+      padding-right: .6rem;
+    }
   }
 
   /* Responsivo */
@@ -164,7 +211,7 @@
     .hero-top{ left: 16px; top: 14px; }
     .hero-logo{ width:82px; height:82px; }
     .nc-img{ height: 170px; }
-    .hero-address{ font-size: .92rem; padding: 9px 12px; gap: 8px; }
+    .cat-bar{ top: 62px; }
   }
 </style>
 
@@ -190,7 +237,6 @@
     <div class="hero-sub">
       Distribuidora de Bebidas Nova Cidade
     </div>
-
     <a class="hero-address"
        href="https://www.google.com/maps/search/?api=1&query=Av%20Prefeito%20Alberto%20Moura%2C%2015%20LJ%205%2C%20Sete%20Lagoas%2035702272"
        target="_blank" rel="noopener">
@@ -201,94 +247,93 @@
 </div>
 
 <!-- ===== CATEGORIAS ABAIXO DO BANNER (NOVO) ===== -->
-<div class="container mt-4">
-  <div class="d-flex flex-wrap gap-2 justify-content-center category-filter">
-
-    <button class="btn btn-outline-dark category-btn active" onclick="filterCategory('all')">
-      Todas
-    </button>
-
-    {% for cat in grouped.keys() %}
-      <button class="btn btn-outline-dark category-btn" onclick="filterCategory('{{ cat }}')">
-        {{ cat }}
-      </button>
-    {% endfor %}
-
-  </div>
-</div>
-
-<!-- CATÁLOGO ABAIXO DO HERO -->
-<div class="mt-4">
+<div class="cat-bar" id="catBar" aria-label="Categorias">
+  <button class="cat-chip active" type="button" data-cat="__all__">
+    <i class="bi bi-grid-3x3-gap"></i> Todas
+  </button>
 
   {% for cat, items in grouped.items() %}
-    <div class="d-flex align-items-center gap-2 mt-4 mb-2">
-      <span class="badge badge-cat px-3 py-2">
-        <i class="bi bi-tags"></i> {{ cat }}
-      </span>
-    </div>
+    <button class="cat-chip" type="button" data-cat="{{ cat|e }}">
+      <i class="bi bi-tags"></i> {{ cat }}
+    </button>
+  {% endfor %}
+</div>
 
-    <div class="row g-3 product-section" data-category="{{ cat }}">
-      {% for p in items %}
-        <div class="col-12 col-sm-6 col-lg-4 product-card" data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
-          <div class="nc-card h-100">
-            {% if p.image_url %}
-              <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
-            {% else %}
-              <div class="nc-img d-flex align-items-center justify-content-center">
-                <i class="bi bi-image text-muted" style="font-size:2rem;"></i>
-              </div>
-            {% endif %}
+<!-- CATÁLOGO ABAIXO -->
+<div class="mt-3" id="catalog">
 
-            <div class="p-3">
-              <div class="d-flex justify-content-between align-items-start gap-2">
-                <div style="min-width:0;">
-                  <h6 class="mb-1">{{ p.name }}</h6>
-                  <div class="text-muted small">{{ p.description }}</div>
+  {% for cat, items in grouped.items() %}
+    <div class="category-block" data-cat="{{ cat|e }}">
+      <div class="d-flex align-items-center gap-2 mt-4 mb-2">
+        <span class="badge badge-cat px-3 py-2">
+          <i class="bi bi-tags"></i> {{ cat }}
+        </span>
+      </div>
 
-                  {% if p.is_promo %}
-                    <div class="mt-2">
-                      <span class="badge text-bg-warning">
-                        <i class="bi bi-lightning-charge"></i> Promoção
-                      </span>
-                    </div>
-                  {% endif %}
+      <div class="row g-3 product-section">
+        {% for p in items %}
+          <div class="col-12 col-sm-6 col-lg-4 product-card"
+               data-cat="{{ cat|e }}"
+               data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
+            <div class="nc-card h-100">
+              {% if p.image_url %}
+                <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
+              {% else %}
+                <div class="nc-img d-flex align-items-center justify-content-center">
+                  <i class="bi bi-image text-muted" style="font-size:2rem;"></i>
+                </div>
+              {% endif %}
+
+              <div class="p-3">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <h6 class="mb-1">{{ p.name }}</h6>
+                    <div class="text-muted small">{{ p.description }}</div>
+
+                    {% if p.is_promo %}
+                      <div class="mt-2">
+                        <span class="badge text-bg-warning">
+                          <i class="bi bi-lightning-charge"></i> Promoção
+                        </span>
+                      </div>
+                    {% endif %}
+                  </div>
+
+                  <div class="text-end">
+                    {% if p.is_promo %}
+                      <div class="text-muted small"><s>{{ p.price }}</s></div>
+                      <div class="fw-bold">{{ p.effective_price }}</div>
+                    {% else %}
+                      <div class="fw-bold">{{ p.price }}</div>
+                    {% endif %}
+                  </div>
                 </div>
 
-                <div class="text-end">
-                  {% if p.is_promo %}
-                    <div class="text-muted small"><s>{{ p.price }}</s></div>
-                    <div class="fw-bold">{{ p.effective_price }}</div>
-                  {% else %}
-                    <div class="fw-bold">{{ p.price }}</div>
-                  {% endif %}
-                </div>
-              </div>
+                <!-- QUANTIDADE + ADICIONAR -->
+                <div class="d-flex align-items-center justify-content-between mt-3 gap-2 flex-wrap">
+                  <div class="qty-pill">
+                    <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})" aria-label="diminuir">
+                      <i class="bi bi-dash-lg"></i>
+                    </button>
+                    <span class="fw-bold" id="qty-{{ p.id }}">0</span>
+                    <button class="btn btn-sm btn-nc"
+                            onclick='inc({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'
+                            aria-label="aumentar">
+                      <i class="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
 
-              <!-- QUANTIDADE + ADICIONAR -->
-              <div class="d-flex align-items-center justify-content-between mt-3 gap-2">
-                <div class="qty-pill">
-                  <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})" aria-label="diminuir">
-                    <i class="bi bi-dash-lg"></i>
-                  </button>
-                  <span class="fw-bold" id="qty-{{ p.id }}">0</span>
                   <button class="btn btn-sm btn-nc"
-                          onclick='inc({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'
-                          aria-label="aumentar">
-                    <i class="bi bi-plus-lg"></i>
+                          onclick='addOne({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'>
+                    <i class="bi bi-cart-plus"></i> Adicionar
                   </button>
                 </div>
 
-                <button class="btn btn-sm btn-nc"
-                        style="white-space:nowrap;"
-                        onclick='addOne({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'>
-                  <i class="bi bi-cart-plus"></i> Adicionar
-                </button>
               </div>
-
             </div>
           </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
     </div>
   {% endfor %}
 
@@ -360,30 +405,33 @@
     window.location.href = "{{ url_for('checkout') }}";
   }
 
-  /* ===== FILTRO DE CATEGORIAS (NOVO) ===== */
-  function filterCategory(category){
-    const sections = document.querySelectorAll(".product-section");
-    const buttons = document.querySelectorAll(".category-btn");
+  // ===== FILTRO CATEGORIAS (NOVO) =====
+  function setActiveChip(btn){
+    document.querySelectorAll(".cat-chip").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  }
 
-    buttons.forEach(btn => btn.classList.remove("active"));
-
-    if(category === 'all'){
-      sections.forEach(sec => sec.style.display = "");
-      document.querySelector("[onclick=\"filterCategory('all')\"]").classList.add("active");
+  function filterByCategory(cat){
+    const blocks = document.querySelectorAll(".category-block");
+    if(cat === "__all__"){
+      blocks.forEach(b => b.style.display = "");
       return;
     }
-
-    sections.forEach(sec => {
-      const cat = sec.getAttribute("data-category") || "";
-      sec.style.display = (cat === category) ? "" : "none";
-    });
-
-    buttons.forEach(btn => {
-      if(btn.innerText.trim() === category){
-        btn.classList.add("active");
-      }
+    blocks.forEach(b => {
+      const bcat = b.getAttribute("data-cat") || "";
+      b.style.display = (bcat === cat) ? "" : "none";
     });
   }
+
+  document.getElementById("catBar")?.addEventListener("click", (e)=>{
+    const btn = e.target.closest(".cat-chip");
+    if(!btn) return;
+    const cat = btn.getAttribute("data-cat");
+    setActiveChip(btn);
+    filterByCategory(cat);
+    // opcional: volta pro topo do catálogo
+    document.getElementById("catalog")?.scrollIntoView({behavior:"smooth", block:"start"});
+  });
 
   renderCounts();
 </script>
