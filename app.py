@@ -5,6 +5,7 @@ from urllib.parse import quote
 from functools import wraps
 from datetime import datetime
 from io import BytesIO
+from typing import Tuple
 
 from werkzeug.utils import secure_filename
 from flask import (
@@ -139,7 +140,6 @@ def ensure_image_columns():
     """
     db = get_db()
     if using_postgres():
-        # Postgres suporta ADD COLUMN IF NOT EXISTS
         db_execute(db, "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_blob BYTEA;")
         db_execute(db, "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_mime TEXT;")
         db_execute(db, "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_name TEXT;")
@@ -200,7 +200,6 @@ def init_db():
         )
         db_commit(db)
 
-        # garante colunas novas
         ensure_image_columns()
 
         # seed whatsapp
@@ -393,7 +392,11 @@ def fetch_products(active_only=True):
 
     if using_postgres():
         where = "WHERE p.is_active = 1" if active_only else ""
-        order = "ORDER BY p.is_active DESC, COALESCE(c.name, p.category, 'Outros'), p.name;" if not active_only else "ORDER BY COALESCE(c.name, p.category, 'Outros'), p.name;"
+        order = (
+            "ORDER BY p.is_active DESC, COALESCE(c.name, p.category, 'Outros'), p.name;"
+            if not active_only
+            else "ORDER BY COALESCE(c.name, p.category, 'Outros'), p.name;"
+        )
         cur = db_execute(
             db,
             f"""
@@ -418,7 +421,6 @@ def fetch_products(active_only=True):
             is_promo_ok = bool(is_promo) and promo_cents > 0
             effective_cents = promo_cents if is_promo_ok else base_cents
 
-            # Se tem blob no banco, força a URL interna da imagem
             final_image_url = image_url or ""
             if image_blob is not None:
                 final_image_url = f"/img/{pid}.webp"
@@ -443,9 +445,12 @@ def fetch_products(active_only=True):
             )
         return out
 
-    # SQLITE
     where = "WHERE p.is_active = 1" if active_only else ""
-    order = "ORDER BY p.is_active DESC, COALESCE(c.name, p.category, 'Outros'), p.name;" if not active_only else "ORDER BY COALESCE(c.name, p.category, 'Outros'), p.name;"
+    order = (
+        "ORDER BY p.is_active DESC, COALESCE(c.name, p.category, 'Outros'), p.name;"
+        if not active_only
+        else "ORDER BY COALESCE(c.name, p.category, 'Outros'), p.name;"
+    )
     rows = db_execute(
         db,
         f"""
@@ -465,7 +470,6 @@ def fetch_products(active_only=True):
         is_promo_ok = bool(r["is_promo"]) and promo_cents > 0
         effective_cents = promo_cents if is_promo_ok else base_cents
 
-        # Se tem blob no sqlite, também serve pela rota /img/<id>.webp
         final_image_url = r["image_url"] or ""
         try:
             if r["image_blob"] is not None:
@@ -494,13 +498,7 @@ def fetch_products(active_only=True):
     return out
 
 
-def unique_webp_name(original_filename: str) -> str:
-    base = secure_filename(os.path.splitext(original_filename or "img")[0]) or "img"
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"{base}_{stamp}.webp"
-
-
-def process_image_to_webp_bytes(file_storage) -> tuple[bytes, str, str]:
+def process_image_to_webp_bytes(file_storage) -> Tuple[bytes, str, str]:
     """
     Retorna: (webp_bytes, mime, original_name)
     """
@@ -990,7 +988,6 @@ def admin_edit_post(pid):
         )
     db_commit(db)
 
-    # Se veio imagem nova, salva no banco
     file = request.files.get("image_file")
     if file and file.filename:
         try:
