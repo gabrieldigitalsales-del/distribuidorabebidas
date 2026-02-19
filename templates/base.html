@@ -61,15 +61,29 @@
       box-shadow: 0 14px 35px rgba(0,0,0,.08);
       background: rgba(255,255,255,.85);
     }
-   .nc-img{
-  height: 200px !important;
-  width: 100% !important;
-  object-fit: contain !important;
-  background: #ffffff !important;
-  padding: 12px !important;
-}
 
+    /* ✅ CAIXA DA IMAGEM (onde a imagem vai ficar centralizada) */
+    .nc-media{
+      width: 100%;
+      height: 200px;              /* altura padrão da área da imagem */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      padding: 12px;
     }
+
+    /* ✅ IMAGEM SEMPRE 93x96, SEM CORTAR, SEM DISTORCER */
+    .nc-img{
+      width: 93px !important;
+      height: 96px !important;
+      object-fit: contain !important;
+      object-position: center !important;
+      display: block;
+      background: transparent !important;
+      padding: 0 !important;
+    }
+
     .qty-pill{
       border-radius: 999px;
       background: rgba(255,255,255,.9);
