@@ -128,26 +128,14 @@
     border: 1px solid rgba(0,0,0,.05);
   }
 
-  /* ✅ PADRÃO FIXO DA CAIXA DE IMAGEM (NÃO CORTA) */
-  .nc-media{
-    width: 100%;
-    height: 180px;                /* padrão desktop */
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding: 8px;                 /* respiro */
-  }
-
+  /* ✅ IMAGEM DO PRODUTO: SEMPRE INTEIRA (NUNCA CORTA) */
   .nc-img{
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    display: block;
-    object-fit: contain;          /* ✅ 100% visível (sem cortar) */
-    object-position: center;
+    width:100%;
+    height:180px;          /* padrão de caixa */
+    object-fit:contain;    /* ✅ mostra inteira */
+    object-position:center;
+    display:block;
+    background:#ffffff;
   }
 
   .qty-pill{
@@ -210,10 +198,7 @@
   .btn-nc{ white-space: nowrap; }
 
   @media (max-width: 576px){
-    .nc-media{
-      height: 140px;              /* padrão celular */
-      padding: 6px;
-    }
+    .nc-img{ height: 145px; } /* menor no celular */
     .product-section{ --bs-gutter-x: .65rem; --bs-gutter-y: .65rem; }
     .nc-card .p-3{ padding: .75rem !important; }
     .qty-pill{ gap: 8px; padding: 6px 8px; }
@@ -226,6 +211,7 @@
     .hero-top{ left: 16px; top: 14px; }
     .hero-logo{ width:82px; height:82px; }
     .cat-bar{ top: 62px; }
+    .nc-img{ height: 160px; }
   }
 </style>
 
@@ -286,13 +272,10 @@
                data-cat="{{ cat|e }}"
                data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
             <div class="nc-card h-100">
-
               {% if p.image_url %}
-                <div class="nc-media">
-                  <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
-                </div>
+                <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
               {% else %}
-                <div class="nc-media">
+                <div class="nc-img d-flex align-items-center justify-content-center">
                   <i class="bi bi-image text-muted" style="font-size:2rem;"></i>
                 </div>
               {% endif %}
