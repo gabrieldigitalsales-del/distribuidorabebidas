@@ -127,12 +127,25 @@
     background: rgba(255,255,255,.85);
     border: 1px solid rgba(0,0,0,.05);
   }
-  .nc-img{
-    width:100%;
-    height:180px;
-    object-fit:cover;
-    display:block;
-    background:#f2f2f2;
+
+  /* ===== IMAGEM DO PRODUTO (QUADRADA + MOSTRA INTEIRA) ===== */
+  .nc-media{
+    width: 100%;
+    aspect-ratio: 1 / 1;     /* quadrado */
+    overflow: hidden;
+    background: #f2f2f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nc-media img{
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;      /* >>> mostra a imagem inteira (sem cortar) */
+    object-position: center;
+    background: #f2f2f2;
   }
 
   .qty-pill{
@@ -199,7 +212,6 @@
 
   /* ===== 2 produtos por linha no celular ===== */
   @media (max-width: 576px){
-    .nc-img{ height: 145px; }
     .product-section{ --bs-gutter-x: .65rem; --bs-gutter-y: .65rem; }
     .nc-card .p-3{ padding: .75rem !important; }
     .qty-pill{ gap: 8px; padding: 6px 8px; }
@@ -212,7 +224,6 @@
     .hero-sub{ font-size: 1.05rem; }
     .hero-top{ left: 16px; top: 14px; }
     .hero-logo{ width:82px; height:82px; }
-    .nc-img{ height: 160px; }
     .cat-bar{ top: 62px; }
   }
 </style>
@@ -277,10 +288,13 @@
                data-cat="{{ cat|e }}"
                data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
             <div class="nc-card h-100">
+
               {% if p.image_url %}
-                <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
+                <div class="nc-media">
+                  <img src="{{ p.image_url }}" alt="{{ p.name }}">
+                </div>
               {% else %}
-                <div class="nc-img d-flex align-items-center justify-content-center">
+                <div class="nc-media">
                   <i class="bi bi-image text-muted" style="font-size:2rem;"></i>
                 </div>
               {% endif %}
