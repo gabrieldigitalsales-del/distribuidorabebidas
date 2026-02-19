@@ -1,86 +1,315 @@
 {% extends "base.html" %}
+
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-  <div>
-    <h4 class="mb-0"><i class="bi bi-gear"></i> Admin — Produtos</h4>
-    <div class="text-muted">Adicionar, editar e remover produtos.</div>
+<div class="d-flex align-items-center justify-content-between mb-3">  <div><h4 class="mb-0"><i class="bi bi-gear"></i> Admin — Produtos</h4>
+
+<div class="text-muted">Adicionar, editar e remover produtos.</div>
+
+  </div>  <div class="d-flex gap-2"><a class="btn btn-nc" href="{{ url_for('admin_categories') }}">
+
+  <i class="bi bi-tags"></i> Categorias
+
+</a>
+
+<a class="btn btn-nc" href="{{ url_for('logout') }}">
+
+  <i class="bi bi-box-arrow-right"></i> Sair
+
+</a>
+
+  </div></div><!-- ===== CONFIG WHATSAPP (NOVO) ===== --><div class="nc-card p-3 mb-3">  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2"><div>
+
+  <h6 class="mb-1"><i class="bi bi-whatsapp"></i> WhatsApp da loja</h6>
+
+  <div class="text-muted small">
+
+    Use apenas números (com DDI). Ex: <strong>5531999999999</strong>
+
   </div>
-  <div class="d-flex gap-2">
-    <a class="btn btn-nc disabled" href="#" tabindex="-1" aria-disabled="true">
-      <i class="bi bi-tags"></i> Categorias
-    </a>
-    <a class="btn btn-nc" href="{{ url_for('logout') }}">
-      <i class="bi bi-box-arrow-right"></i> Sair
-    </a>
-  </div>
+
 </div>
 
-<!-- ===== CONFIG WHATSAPP (NOVO) ===== -->
-<div class="nc-card p-3 mb-3">
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <div>
-      <h6 class="mb-1"><i class="bi bi-whatsapp"></i> WhatsApp da loja</h6>
-      <div class="text-muted small">
-        Use apenas números (com DDI). Ex: <strong>5531999999999</strong>
-      </div>
+<form class="d-flex gap-2 align-items-center" method="post" action="{{ url_for('admin_update_whatsapp') }}">
+
+  <input class="form-control" name="store_whatsapp" style="min-width:260px"
+
+         value="{{ store_whatsapp }}" placeholder="5531999999999" required>
+
+  <button class="btn btn-primary">
+
+    <i class="bi bi-check2-circle"></i> Salvar
+
+  </button>
+
+</form>
+
+  </div></div><div class="row g-3">  <div class="col-12 col-lg-5"><div class="nc-card p-3">
+
+  <h6 class="mb-3"><i class="bi bi-plus-circle"></i> Adicionar produto</h6>
+
+
+
+  <form method="post" action="{{ url_for('admin_add') }}" enctype="multipart/form-data">
+
+    <div class="mb-2">
+
+      <label class="form-label">Nome</label>
+
+      <input class="form-control" name="name" required>
+
     </div>
-    <form class="d-flex gap-2 align-items-center" method="post" action="{{ url_for('admin_update_whatsapp') }}">
-      <input class="form-control" name="store_whatsapp" style="min-width:260px"
-             value="{{ store_whatsapp }}" placeholder="5531999999999" required>
-      <button class="btn btn-primary">
-        <i class="bi bi-check2-circle"></i> Salvar
-      </button>
-    </form>
-  </div>
+
+
+
+    <div class="mb-2">
+
+      <label class="form-label">Descrição</label>
+
+      <input class="form-control" name="description">
+
+    </div>
+
+
+
+    <div class="row g-2">
+
+      <div class="col-6">
+
+        <label class="form-label">Preço (ex: 9,99)</label>
+
+        <input class="form-control" name="price" required>
+
+      </div>
+
+
+
+      <div class="col-6">
+
+        <label class="form-label">Categoria</label>
+
+        <select class="form-select" name="category_id" required>
+
+          {% for c in categories %}
+
+            <option value="{{ c.id }}">{{ c.name }}</option>
+
+          {% endfor %}
+
+        </select>
+
+        <div class="form-text">
+
+          Cadastre categorias em <a href="{{ url_for('admin_categories') }}">Categorias</a>.
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="mt-2">
+
+      <label class="form-label">Imagem do PC</label>
+
+      <input type="file" class="form-control" name="image_file" accept="image/*">
+
+    </div>
+
+
+
+    <div class="row g-2 mt-2">
+
+      <div class="col-6">
+
+        <div class="form-check">
+
+          <input class="form-check-input" type="checkbox" name="is_active" id="active" checked>
+
+          <label class="form-check-label" for="active">Ativo no catálogo</label>
+
+        </div>
+
+      </div>
+
+      <div class="col-6">
+
+        <div class="form-check">
+
+          <input class="form-check-input" type="checkbox" name="is_promo" id="promo" onchange="togglePromoAdd()">
+
+          <label class="form-check-label" for="promo">Em promoção</label>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+    <div class="mt-2" id="promoAddWrap" style="display:none;">
+
+      <label class="form-label">Preço promocional (ex: 7,99)</label>
+
+      <input class="form-control" name="promo_price" placeholder="7,99">
+
+    </div>
+
+
+
+    <button class="btn btn-primary w-100 mt-3 py-2">
+
+      <i class="bi bi-check2-circle"></i> Salvar
+
+    </button>
+
+  </form>
+
 </div>
 
-<div class="row g-3">
-  <div class="col-12 col-lg-5">
-    <div class="nc-card p-3">
-      <h6 class="mb-3"><i class="bi bi-plus-circle"></i> Adicionar produto</h6>
+  </div>  <div class="col-12 col-lg-7"><div class="nc-card p-3">
 
-      <form method="post" action="{{ url_for('admin_add') }}" enctype="multipart/form-data">
-        <div class="mb-2">
-          <label class="form-label">Nome</label>
-          <input class="form-control" name="name" required>
-        </div>
+  <h6 class="mb-3"><i class="bi bi-box-seam"></i> Lista de produtos</h6>
 
-        <div class="mb-2">
-          <label class="form-label">Descrição</label>
-          <input class="form-control" name="description">
-        </div>
 
-        <div class="row g-2">
-          <div class="col-6">
-            <label class="form-label">Preço (ex: 9,99)</label>
-            <input class="form-control" name="price" required>
-          </div>
 
-          <div class="col-6">
-            <label class="form-label">Categoria</label>
-            <select class="form-select" name="category_id" required>
-              {% for c in categories %}
-                <option value="{{ c.id }}">{{ c.name }}</option>
-              {% endfor %}
-            </select>
-            <div class="form-text">
-              Cadastre categorias no futuro (em breve).
-            </div>
-          </div>
-        </div>
+  <div class="table-responsive">
 
-        <div class="mt-2">
-          <label class="form-label">Imagem do PC</label>
-          <input type="file" class="form-control" name="image_file" accept="image/*">
-        </div>
+    <table class="table align-middle">
 
-        <div class="row g-2 mt-2">
-          <div class="col-6">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="is_active" id="active" checked>
-              <label class="form-check-label" for="active">Ativo no catálogo</label>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="
+      <thead>
+
+        <tr>
+
+          <th>Produto</th>
+
+          <th>Categoria</th>
+
+          <th>Preço</th>
+
+          <th>Promo</th>
+
+          <th>Status</th>
+
+          <th class="text-end">Ações</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for p in products %}
+
+          <tr>
+
+            <td>
+
+              <div class="fw-semibold">{{ p.name }}</div>
+
+              <div class="text-muted small">{{ p.description }}</div>
+
+            </td>
+
+            <td><span class="badge badge-cat">{{ p.category }}</span></td>
+
+            <td>
+
+              {% if p.is_promo %}
+
+                <div class="text-muted small"><s>{{ p.price }}</s></div>
+
+                <div class="fw-bold">{{ p.effective_price }}</div>
+
+              {% else %}
+
+                <div class="fw-bold">{{ p.price }}</div>
+
+              {% endif %}
+
+            </td>
+
+            <td>
+
+              {% if p.is_promo %}
+
+                <span class="badge text-bg-warning"><i class="bi bi-lightning-charge"></i> Promo</span>
+
+              {% else %}
+
+                <span class="text-muted">—</span>
+
+              {% endif %}
+
+            </td>
+
+            <td>
+
+              {% if p.is_active %}
+
+                <span class="badge text-bg-success">Ativo</span>
+
+              {% else %}
+
+                <span class="badge text-bg-secondary">Inativo</span>
+
+              {% endif %}
+
+            </td>
+
+            <td class="text-end">
+
+              <a class="btn btn-sm btn-nc" href="{{ url_for('admin_edit', pid=p.id) }}">
+
+                <i class="bi bi-pencil"></i> Editar
+
+              </a>
+
+              <form class="d-inline" method="post" action="{{ url_for('admin_delete', pid=p.id) }}" onsubmit="return confirm('Remover este produto?')">
+
+                <button class="btn btn-sm btn-danger">
+
+                  <i class="bi bi-trash3"></i> Remover
+
+                </button>
+
+              </form>
+
+            </td>
+
+          </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+
+</div>
+
+  </div></div>{% endblock %}
+
+{% block scripts %}
+
+{{ super() }}
+
+<script>
+  
+  function togglePromoAdd(){
+  
+    const promo = document.getElementById("promo");
+  
+    const wrap = document.getElementById("promoAddWrap");
+  
+    wrap.style.display = promo.checked ? "" : "none";
+  
+  }
+  
+</script>{% endblock %}
