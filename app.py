@@ -24,7 +24,7 @@ except:
 APP_NAME = "Distribuidora de Bebidas Nova Cidade"
 
 # ===== BANCO (NUNCA MAIS DÁ ERRO 500) =====
-DB_PATH = os.getenv("DB_PATH", "/tmp/database.sqlite3")
+DB_PATH=/tmp/database.sqlite3
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 # Upload
