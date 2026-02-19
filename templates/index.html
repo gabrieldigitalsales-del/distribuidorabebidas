@@ -82,14 +82,6 @@
     font-size: 1.15rem;
   }
 
-  @media (max-width: 768px){
-    .hero-address{
-      font-size: .92rem;
-      padding: 9px 12px;
-      gap: 8px;
-    }
-  }
-
   /* Logo no topo (esquerda) */
   .hero-top{
     position:absolute;
@@ -144,6 +136,10 @@
     background: #fff;
   }
 
+  .btn-add{
+    white-space: nowrap;
+  }
+
   .floating-cart{
     position: fixed;
     right: 18px;
@@ -161,6 +157,23 @@
     .hero-top{ left: 16px; top: 14px; }
     .hero-logo{ width:82px; height:82px; }
     .nc-img{ height: 160px; }
+    .hero-address{
+      font-size: .92rem;
+      padding: 9px 12px;
+      gap: 8px;
+    }
+  }
+
+  /* Ajuste forte pro celular: 2 por linha + botão não cortar */
+  @media (max-width: 576px){
+    .nc-img{ height: 140px; }
+    .product-card h6{ font-size: .95rem; }
+    .qty-pill{ gap: 6px; padding: 4px 8px; }
+    .btn-nc{ padding: .25rem .45rem; font-size: .85rem; }
+
+    /* No celular, o texto "Adicionar" some e fica só o ícone */
+    .btn-add span{ display:none; }
+    .btn-add{ padding: .35rem .55rem; }
   }
 </style>
 
@@ -207,8 +220,8 @@
 
     <div class="row g-3 product-section">
       {% for p in items %}
-        <!-- AQUI: 2 por linha no celular (col-6) e 3 no PC (col-lg-4) -->
-        <div class="col-6 col-lg-4 product-card" data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
+        <!-- 2 por linha no celular (col-6), 3 por linha no desktop (col-lg-4) -->
+        <div class="col-6 col-sm-6 col-lg-4 product-card" data-name="{{ (p.name ~ ' ' ~ p.description ~ ' ' ~ p.category)|lower }}">
           <div class="nc-card h-100">
             {% if p.image_url %}
               <img class="nc-img" src="{{ p.image_url }}" alt="{{ p.name }}">
@@ -244,7 +257,7 @@
               </div>
 
               <!-- QUANTIDADE + ADICIONAR -->
-              <div class="d-flex align-items-center justify-content-between mt-3">
+              <div class="d-flex align-items-center justify-content-between mt-3 gap-2">
                 <div class="qty-pill">
                   <button class="btn btn-sm btn-nc" onclick="dec({{ p.id }})" aria-label="diminuir">
                     <i class="bi bi-dash-lg"></i>
@@ -257,9 +270,10 @@
                   </button>
                 </div>
 
-                <button class="btn btn-sm btn-nc"
+                <button class="btn btn-sm btn-nc btn-add"
                         onclick='addOne({{ p.id }}, {{ p.name|tojson }}, {{ p.effective_price_cents }})'>
-                  <i class="bi bi-cart-plus"></i> Adicionar
+                  <i class="bi bi-cart-plus"></i>
+                  <span class="ms-1">Adicionar</span>
                 </button>
               </div>
 
