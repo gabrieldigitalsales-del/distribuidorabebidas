@@ -17,6 +17,8 @@ from flask import (
     flash,
     jsonify,
     session,
+    Response,
+    abort,
 )
 
 # Pillow (redimensionar imagens)
@@ -39,10 +41,14 @@ BASE_DIR = os.path.dirname(__file__)
 # Se existir DATABASE_URL -> Postgres
 DATABASE_URL = (os.getenv("DATABASE_URL") or "").strip()
 
+# Normaliza caso venha postgres://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://") :]
+
 # SQLite fallback (se não tiver Postgres)
 DB_PATH = os.path.join(BASE_DIR, "database.sqlite3")
 
-# Uploads (no Railway sem Volume, isso SOME a cada deploy)
+# Uploads locais (apenas para dev; em produção no Railway sem Volume isso SOME)
 DEFAULT_UPLOAD = os.path.join(BASE_DIR, "static", "uploads")
 UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", DEFAULT_UPLOAD)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -112,6 +118,44 @@ def db_fetchall(cur):
     return cur.fetchall()
 
 
+def sqlite_column_exists(db, table: str, col: str) -> bool:
+    try:
+        rows = db_execute(db, f"PRAGMA table_info({table});").fetchall()
+        for r in rows:
+            # r: (cid, name, type, notnull, dflt_value, pk)
+            if str(r[1]).lower() == col.lower():
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def ensure_image_columns():
+    """
+    Garante colunas para armazenar imagem no banco:
+    - products.image_blob (bytes do webp)
+    - products.image_mime (ex: image/webp)
+    - products.image_name (nome original)
+    """
+    db = get_db()
+    if using_postgres():
+        # Postgres suporta ADD COLUMN IF NOT EXISTS
+        db_execute(db, "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_blob BYTEA;")
+        db_execute(db, "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_mime TEXT;")
+        db_execute(db, "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_name TEXT;")
+        db_commit(db)
+        return
+
+    # SQLite: precisa checar e alterar
+    if not sqlite_column_exists(db, "products", "image_blob"):
+        db_execute(db, "ALTER TABLE products ADD COLUMN image_blob BLOB;")
+    if not sqlite_column_exists(db, "products", "image_mime"):
+        db_execute(db, "ALTER TABLE products ADD COLUMN image_mime TEXT;")
+    if not sqlite_column_exists(db, "products", "image_name"):
+        db_execute(db, "ALTER TABLE products ADD COLUMN image_name TEXT;")
+    db_commit(db)
+
+
 def init_db():
     db = get_db()
 
@@ -155,6 +199,9 @@ def init_db():
             """,
         )
         db_commit(db)
+
+        # garante colunas novas
+        ensure_image_columns()
 
         # seed whatsapp
         cur = db_execute(db, "SELECT value FROM settings WHERE key=%s;", ("whatsapp_number",))
@@ -217,6 +264,8 @@ def init_db():
         """,
     )
     db_commit(db)
+
+    ensure_image_columns()
 
     row = db_execute(db, "SELECT value FROM settings WHERE key=?;", ("whatsapp_number",)).fetchone()
     if row is None:
@@ -343,41 +392,37 @@ def fetch_products(active_only=True):
     db = get_db()
 
     if using_postgres():
-        if active_only:
-            cur = db_execute(
-                db,
-                """
-                SELECT p.id, p.name, p.description, p.price_cents, p.promo_price_cents, p.is_promo,
-                       p.image_url, p.category, p.category_id, p.is_active,
-                       c.name AS category_name
-                FROM products p
-                LEFT JOIN categories c ON c.id = p.category_id
-                WHERE p.is_active = 1
-                ORDER BY COALESCE(c.name, p.category, 'Outros'), p.name;
-                """,
-            )
-        else:
-            cur = db_execute(
-                db,
-                """
-                SELECT p.id, p.name, p.description, p.price_cents, p.promo_price_cents, p.is_promo,
-                       p.image_url, p.category, p.category_id, p.is_active,
-                       c.name AS category_name
-                FROM products p
-                LEFT JOIN categories c ON c.id = p.category_id
-                ORDER BY p.is_active DESC, COALESCE(c.name, p.category, 'Outros'), p.name;
-                """,
-            )
+        where = "WHERE p.is_active = 1" if active_only else ""
+        order = "ORDER BY p.is_active DESC, COALESCE(c.name, p.category, 'Outros'), p.name;" if not active_only else "ORDER BY COALESCE(c.name, p.category, 'Outros'), p.name;"
+        cur = db_execute(
+            db,
+            f"""
+            SELECT p.id, p.name, p.description, p.price_cents, p.promo_price_cents, p.is_promo,
+                   p.image_url, p.category, p.category_id, p.is_active,
+                   c.name AS category_name,
+                   p.image_blob
+            FROM products p
+            LEFT JOIN categories c ON c.id = p.category_id
+            {where}
+            {order}
+            """,
+        )
 
         rows = db_fetchall(cur)
         out = []
         for r in rows:
-            pid, name, desc, price_cents, promo_price_cents, is_promo, image_url, category, category_id, is_active, category_name = r
+            pid, name, desc, price_cents, promo_price_cents, is_promo, image_url, category, category_id, is_active, category_name, image_blob = r
             cat = category_name or category or "Outros"
             base_cents = int(price_cents or 0)
             promo_cents = int(promo_price_cents or 0) if promo_price_cents is not None else 0
             is_promo_ok = bool(is_promo) and promo_cents > 0
             effective_cents = promo_cents if is_promo_ok else base_cents
+
+            # Se tem blob no banco, força a URL interna da imagem
+            final_image_url = image_url or ""
+            if image_blob is not None:
+                final_image_url = f"/img/{pid}.webp"
+
             out.append(
                 dict(
                     id=pid,
@@ -390,7 +435,7 @@ def fetch_products(active_only=True):
                     is_promo=is_promo_ok,
                     effective_price_cents=effective_cents,
                     effective_price=money_br(effective_cents),
-                    image_url=image_url or "",
+                    image_url=final_image_url,
                     category=cat,
                     category_id=category_id,
                     is_active=bool(is_active),
@@ -399,27 +444,18 @@ def fetch_products(active_only=True):
         return out
 
     # SQLITE
-    if active_only:
-        rows = db_execute(
-            db,
-            """
-            SELECT p.*, c.name AS category_name
-            FROM products p
-            LEFT JOIN categories c ON c.id = p.category_id
-            WHERE p.is_active = 1
-            ORDER BY COALESCE(c.name, p.category, 'Outros'), p.name;
-            """
-        ).fetchall()
-    else:
-        rows = db_execute(
-            db,
-            """
-            SELECT p.*, c.name AS category_name
-            FROM products p
-            LEFT JOIN categories c ON c.id = p.category_id
-            ORDER BY p.is_active DESC, COALESCE(c.name, p.category, 'Outros'), p.name;
-            """
-        ).fetchall()
+    where = "WHERE p.is_active = 1" if active_only else ""
+    order = "ORDER BY p.is_active DESC, COALESCE(c.name, p.category, 'Outros'), p.name;" if not active_only else "ORDER BY COALESCE(c.name, p.category, 'Outros'), p.name;"
+    rows = db_execute(
+        db,
+        f"""
+        SELECT p.*, c.name AS category_name
+        FROM products p
+        LEFT JOIN categories c ON c.id = p.category_id
+        {where}
+        {order}
+        """
+    ).fetchall()
 
     out = []
     for r in rows:
@@ -428,6 +464,15 @@ def fetch_products(active_only=True):
         promo_cents = int(r["promo_price_cents"] or 0) if r["promo_price_cents"] is not None else 0
         is_promo_ok = bool(r["is_promo"]) and promo_cents > 0
         effective_cents = promo_cents if is_promo_ok else base_cents
+
+        # Se tem blob no sqlite, também serve pela rota /img/<id>.webp
+        final_image_url = r["image_url"] or ""
+        try:
+            if r["image_blob"] is not None:
+                final_image_url = f"/img/{r['id']}.webp"
+        except Exception:
+            pass
+
         out.append(
             dict(
                 id=r["id"],
@@ -440,7 +485,7 @@ def fetch_products(active_only=True):
                 is_promo=is_promo_ok,
                 effective_price_cents=effective_cents,
                 effective_price=money_br(effective_cents),
-                image_url=r["image_url"] or "",
+                image_url=final_image_url,
                 category=cat,
                 category_id=r["category_id"],
                 is_active=bool(r["is_active"]),
@@ -455,7 +500,10 @@ def unique_webp_name(original_filename: str) -> str:
     return f"{base}_{stamp}.webp"
 
 
-def process_and_save_image(file_storage) -> str:
+def process_image_to_webp_bytes(file_storage) -> tuple[bytes, str, str]:
+    """
+    Retorna: (webp_bytes, mime, original_name)
+    """
     if not Image:
         raise RuntimeError("Pillow não está instalado. Rode: pip install pillow")
 
@@ -482,12 +530,58 @@ def process_and_save_image(file_storage) -> str:
     img = img.crop((left, top, left + side, top + side))
     img = img.resize((800, 800), Image.Resampling.LANCZOS)
 
-    fname = unique_webp_name(file_storage.filename)
-    save_path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    out = BytesIO()
+    img.save(out, "WEBP", quality=82, method=6)
+    return out.getvalue(), "image/webp", (file_storage.filename or "imagem")
 
-    img.save(save_path, "WEBP", quality=82, method=6)
-    return f"/static/uploads/{fname}"
+
+def save_image_to_db(product_id: int, webp_bytes: bytes, mime: str, original_name: str):
+    db = get_db()
+    if using_postgres():
+        db_execute(
+            db,
+            """
+            UPDATE products
+            SET image_blob=%s, image_mime=%s, image_name=%s, image_url=%s
+            WHERE id=%s;
+            """,
+            (webp_bytes, mime, original_name, f"/img/{product_id}.webp", product_id),
+        )
+    else:
+        db_execute(
+            db,
+            """
+            UPDATE products
+            SET image_blob=?, image_mime=?, image_name=?, image_url=?
+            WHERE id=?;
+            """,
+            (webp_bytes, mime, original_name, f"/img/{product_id}.webp", product_id),
+        )
+    db_commit(db)
+
+
+# =========================
+# SERVIR IMAGEM DO BANCO
+# =========================
+@app.get("/img/<int:pid>.webp")
+def product_image(pid: int):
+    db = get_db()
+    if using_postgres():
+        cur = db_execute(db, "SELECT image_blob, image_mime FROM products WHERE id=%s;", (pid,))
+        row = db_fetchone(cur)
+        if not row:
+            abort(404)
+        blob, mime = row[0], row[1]
+    else:
+        row = db_execute(db, "SELECT image_blob, image_mime FROM products WHERE id=?;", (pid,)).fetchone()
+        if not row:
+            abort(404)
+        blob, mime = row["image_blob"], row["image_mime"]
+
+    if blob is None:
+        abort(404)
+
+    return Response(blob, mimetype=(mime or "image/webp"), headers={"Cache-Control": "public, max-age=86400"})
 
 
 # =========================
@@ -733,25 +827,19 @@ def admin_add():
     except Exception:
         category_id = None
 
-    image_url = ""
-    file = request.files.get("image_file")
-    if file and file.filename:
-        try:
-            image_url = process_and_save_image(file)
-        except Exception as e:
-            flash(f"Falha ao processar imagem: {e}", "error")
-            return redirect(url_for("admin"))
-
+    # Primeiro cria o produto SEM imagem (pra ter o ID)
     db = get_db()
     if using_postgres():
-        db_execute(
+        cur = db_execute(
             db,
             """
             INSERT INTO products (name, description, price_cents, image_url, category_id, is_active, is_promo, promo_price_cents)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s);
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id;
             """,
-            (name, description, price_cents, image_url, category_id, is_active, is_promo, promo_price_cents),
+            (name, description, price_cents, "", category_id, is_active, is_promo, promo_price_cents),
         )
+        pid = db_fetchone(cur)[0]
     else:
         db_execute(
             db,
@@ -759,10 +847,22 @@ def admin_add():
             INSERT INTO products (name, description, price_cents, image_url, category_id, is_active, is_promo, promo_price_cents)
             VALUES (?,?,?,?,?,?,?,?);
             """,
-            (name, description, price_cents, image_url, category_id, is_active, is_promo, promo_price_cents),
+            (name, description, price_cents, "", category_id, is_active, is_promo, promo_price_cents),
         )
+        pid = int(db_execute(db, "SELECT last_insert_rowid();").fetchone()[0])
 
     db_commit(db)
+
+    # Agora processa e salva imagem NO BANCO (se enviada)
+    file = request.files.get("image_file")
+    if file and file.filename:
+        try:
+            webp_bytes, mime, original_name = process_image_to_webp_bytes(file)
+            save_image_to_db(pid, webp_bytes, mime, original_name)
+        except Exception as e:
+            flash(f"Produto criado, mas falha ao processar imagem: {e}", "error")
+            return redirect(url_for("admin"))
+
     flash("Produto adicionado!", "success")
     return redirect(url_for("admin"))
 
@@ -778,7 +878,8 @@ def admin_edit(pid):
             db,
             """
             SELECT p.id, p.name, p.description, p.price_cents, p.image_url,
-                   p.category_id, p.is_active, p.is_promo, p.promo_price_cents
+                   p.category_id, p.is_active, p.is_promo, p.promo_price_cents,
+                   p.image_blob
             FROM products p WHERE p.id=%s;
             """,
             (pid,),
@@ -787,12 +888,15 @@ def admin_edit(pid):
         if not row:
             flash("Produto não encontrado.", "error")
             return redirect(url_for("admin"))
+        image_url = row[4] or ""
+        if row[9] is not None:
+            image_url = f"/img/{pid}.webp"
         p = dict(
             id=row[0],
             name=row[1],
             description=row[2] or "",
             price_cents=int(row[3] or 0),
-            image_url=row[4] or "",
+            image_url=image_url,
             category_id=row[5],
             is_active=bool(row[6]),
             is_promo=bool(row[7]) and (row[8] is not None and int(row[8]) > 0),
@@ -804,12 +908,18 @@ def admin_edit(pid):
             flash("Produto não encontrado.", "error")
             return redirect(url_for("admin"))
         promo = int(row["promo_price_cents"] or 0) if row["promo_price_cents"] is not None else 0
+        image_url = row["image_url"] or ""
+        try:
+            if row["image_blob"] is not None:
+                image_url = f"/img/{pid}.webp"
+        except Exception:
+            pass
         p = dict(
             id=row["id"],
             name=row["name"],
             description=row["description"] or "",
             price_cents=int(row["price_cents"] or 0),
-            image_url=row["image_url"] or "",
+            image_url=image_url,
             category_id=row["category_id"],
             is_active=bool(row["is_active"]),
             is_promo=bool(row["is_promo"]) and promo > 0,
@@ -855,64 +965,41 @@ def admin_edit_post(pid):
     except Exception:
         category_id = None
 
-    image_url = None
+    db = get_db()
+    if using_postgres():
+        db_execute(
+            db,
+            """
+            UPDATE products
+            SET name=%s, description=%s, price_cents=%s, category_id=%s,
+                is_active=%s, is_promo=%s, promo_price_cents=%s
+            WHERE id=%s;
+            """,
+            (name, description, price_cents, category_id, is_active, is_promo, promo_price_cents, pid),
+        )
+    else:
+        db_execute(
+            db,
+            """
+            UPDATE products
+            SET name=?, description=?, price_cents=?, category_id=?,
+                is_active=?, is_promo=?, promo_price_cents=?
+            WHERE id=?;
+            """,
+            (name, description, price_cents, category_id, is_active, is_promo, promo_price_cents, pid),
+        )
+    db_commit(db)
+
+    # Se veio imagem nova, salva no banco
     file = request.files.get("image_file")
     if file and file.filename:
         try:
-            image_url = process_and_save_image(file)
+            webp_bytes, mime, original_name = process_image_to_webp_bytes(file)
+            save_image_to_db(pid, webp_bytes, mime, original_name)
         except Exception as e:
-            flash(f"Falha ao processar imagem: {e}", "error")
+            flash(f"Produto atualizado, mas falha ao processar imagem: {e}", "error")
             return redirect(url_for("admin_edit", pid=pid))
 
-    db = get_db()
-    if using_postgres():
-        if image_url is not None:
-            db_execute(
-                db,
-                """
-                UPDATE products
-                SET name=%s, description=%s, price_cents=%s, image_url=%s, category_id=%s,
-                    is_active=%s, is_promo=%s, promo_price_cents=%s
-                WHERE id=%s;
-                """,
-                (name, description, price_cents, image_url, category_id, is_active, is_promo, promo_price_cents, pid),
-            )
-        else:
-            db_execute(
-                db,
-                """
-                UPDATE products
-                SET name=%s, description=%s, price_cents=%s, category_id=%s,
-                    is_active=%s, is_promo=%s, promo_price_cents=%s
-                WHERE id=%s;
-                """,
-                (name, description, price_cents, category_id, is_active, is_promo, promo_price_cents, pid),
-            )
-    else:
-        if image_url is not None:
-            db_execute(
-                db,
-                """
-                UPDATE products
-                SET name=?, description=?, price_cents=?, image_url=?, category_id=?,
-                    is_active=?, is_promo=?, promo_price_cents=?
-                WHERE id=?;
-                """,
-                (name, description, price_cents, image_url, category_id, is_active, is_promo, promo_price_cents, pid),
-            )
-        else:
-            db_execute(
-                db,
-                """
-                UPDATE products
-                SET name=?, description=?, price_cents=?, category_id=?,
-                    is_active=?, is_promo=?, promo_price_cents=?
-                WHERE id=?;
-                """,
-                (name, description, price_cents, category_id, is_active, is_promo, promo_price_cents, pid),
-            )
-
-    db_commit(db)
     flash("Produto atualizado!", "success")
     return redirect(url_for("admin"))
 
