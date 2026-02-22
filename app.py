@@ -6,7 +6,7 @@ from urllib.parse import quote
 from functools import wraps
 from datetime import datetime
 from io import BytesIO
-from typing import Tuple, List, Dict, Any
+from typing import Tuple
 
 from werkzeug.utils import secure_filename
 from flask import (
@@ -124,6 +124,7 @@ def sqlite_column_exists(db, table: str, col: str) -> bool:
     try:
         rows = db_execute(db, f"PRAGMA table_info({table});").fetchall()
         for r in rows:
+            # r: (cid, name, type, notnull, dflt_value, pk)
             if str(r[1]).lower() == col.lower():
                 return True
         return False
@@ -146,6 +147,7 @@ def ensure_image_columns():
         db_commit(db)
         return
 
+    # SQLite: precisa checar e alterar
     if not sqlite_column_exists(db, "products", "image_blob"):
         db_execute(db, "ALTER TABLE products ADD COLUMN image_blob BLOB;")
     if not sqlite_column_exists(db, "products", "image_mime"):
@@ -208,8 +210,10 @@ def init_db():
             db_execute(db, "INSERT INTO settings (key, value) VALUES (%s, %s);", ("whatsapp_number", STORE_WHATSAPP_NUMBER))
             db_commit(db)
 
-        # seed frete (padrão + regras) - NOVO
-        seed_shipping_settings_if_missing()
+        # ===== SEED FRETE (NOVO) =====
+        _seed_setting_if_missing("freight_default_cents", "0")
+        _seed_setting_if_missing("freight_free_over_cents", "0")
+        _seed_setting_if_missing("freight_map_json", "{}")
 
         # seed categorias
         cur = db_execute(db, "SELECT COUNT(*) FROM categories;")
@@ -273,8 +277,10 @@ def init_db():
         db_execute(db, "INSERT INTO settings (key, value) VALUES (?, ?);", ("whatsapp_number", STORE_WHATSAPP_NUMBER))
         db_commit(db)
 
-    # seed frete (padrão + regras) - NOVO
-    seed_shipping_settings_if_missing()
+    # ===== SEED FRETE (NOVO) =====
+    _seed_setting_if_missing("freight_default_cents", "0")
+    _seed_setting_if_missing("freight_free_over_cents", "0")
+    _seed_setting_if_missing("freight_map_json", "{}")
 
     cur = db_execute(db, "SELECT COUNT(*) as c FROM categories;")
     c = db_fetchone(cur)["c"]
@@ -283,6 +289,21 @@ def init_db():
         for name, active in base_cats:
             db_execute(db, "INSERT OR IGNORE INTO categories (name, is_active) VALUES (?, ?);", (name, active))
         db_commit(db)
+
+
+def _seed_setting_if_missing(key: str, value: str):
+    db = get_db()
+    if using_postgres():
+        cur = db_execute(db, "SELECT value FROM settings WHERE key=%s;", (key,))
+        row = db_fetchone(cur)
+        if row is None:
+            db_execute(db, "INSERT INTO settings (key, value) VALUES (%s, %s);", (key, value))
+            db_commit(db)
+    else:
+        row = db_execute(db, "SELECT value FROM settings WHERE key=?;", (key,)).fetchone()
+        if row is None:
+            db_execute(db, "INSERT INTO settings (key, value) VALUES (?, ?);", (key, value))
+            db_commit(db)
 
 
 @app.before_request
@@ -347,17 +368,6 @@ def set_setting(key: str, value: str) -> None:
     db_commit(db)
 
 
-def get_setting_int(key: str, default: int = 0) -> int:
-    try:
-        return int(get_setting(key, str(default)) or default)
-    except Exception:
-        return default
-
-
-def set_setting_int(key: str, value: int) -> None:
-    set_setting(key, str(int(value)))
-
-
 def normalize_whatsapp(raw: str) -> str:
     digits = re.sub(r"\D+", "", raw or "")
     if not digits:
@@ -365,67 +375,6 @@ def normalize_whatsapp(raw: str) -> str:
     if len(digits) == 11:
         digits = "55" + digits
     return digits
-
-
-# =========================
-# FRETE (NOVO)
-# =========================
-def seed_shipping_settings_if_missing():
-    """
-    Cria:
-      - shipping_default_fee_cents (frete padrão)
-      - shipping_rules_json (lista de regras)
-    """
-    if not get_setting("shipping_default_fee_cents", ""):
-        set_setting_int("shipping_default_fee_cents", 0)  # padrão: R$ 0,00
-
-    if not get_setting("shipping_rules_json", ""):
-        # regras exemplo (você troca na tela)
-        example = [
-            {"type": "contains", "keyword": "centro", "fee_cents": 300},
-            {"type": "contains", "keyword": "sete lagoas", "fee_cents": 400},
-        ]
-        set_setting("shipping_rules_json", json.dumps(example, ensure_ascii=False))
-
-
-def load_shipping_rules() -> List[Dict[str, Any]]:
-    raw = get_setting("shipping_rules_json", "")
-    if not raw:
-        return []
-    try:
-        rules = json.loads(raw)
-        if isinstance(rules, list):
-            out = []
-            for r in rules:
-                if not isinstance(r, dict):
-                    continue
-                t = (r.get("type") or "contains").strip()
-                kw = (r.get("keyword") or "").strip()
-                try:
-                    fc = int(r.get("fee_cents") or 0)
-                except Exception:
-                    fc = 0
-                if kw:
-                    out.append({"type": t, "keyword": kw, "fee_cents": max(fc, 0)})
-            return out
-    except Exception:
-        pass
-    return []
-
-
-def calc_shipping_fee_cents(address: str) -> int:
-    addr = (address or "").strip().lower()
-    rules = load_shipping_rules()
-
-    for r in rules:
-        if (r.get("type") or "contains") == "contains":
-            if (r.get("keyword") or "").lower() in addr:
-                try:
-                    return max(int(r.get("fee_cents") or 0), 0)
-                except Exception:
-                    return 0
-
-    return max(get_setting_int("shipping_default_fee_cents", 0), 0)
 
 
 # =========================
@@ -445,6 +394,60 @@ def parse_price_to_cents(raw: str) -> int:
         s = s.replace(".", "").replace(",", ".")
     value = float(s)
     return int(round(value * 100))
+
+
+def normalize_bairro(raw: str) -> str:
+    s = (raw or "").strip().lower()
+    s = re.sub(r"\s+", " ", s)
+    s = re.sub(r"[^\w\s\-]", "", s)  # tira pontuação
+    return s
+
+
+def load_freight_map() -> dict:
+    """
+    settings.freight_map_json: {"centro": 600, "nova cidade": 800}
+    """
+    try:
+        data = json.loads(get_setting("freight_map_json", "{}") or "{}")
+        if isinstance(data, dict):
+            out = {}
+            for k, v in data.items():
+                nk = normalize_bairro(k)
+                try:
+                    out[nk] = int(v)
+                except Exception:
+                    pass
+            return out
+    except Exception:
+        pass
+    return {}
+
+
+def compute_freight_cents(bairro: str, cart_total_cents: int) -> int:
+    """
+    Regras:
+    1) Se cart_total >= free_over -> frete 0
+    2) Se bairro existir no mapa -> usa valor do bairro
+    3) Senão -> usa frete padrão
+    """
+    try:
+        free_over = int(get_setting("freight_free_over_cents", "0") or "0")
+    except Exception:
+        free_over = 0
+
+    if free_over > 0 and int(cart_total_cents or 0) >= free_over:
+        return 0
+
+    fmap = load_freight_map()
+    nb = normalize_bairro(bairro)
+    if nb and nb in fmap:
+        return int(fmap[nb])
+
+    try:
+        default = int(get_setting("freight_default_cents", "0") or "0")
+    except Exception:
+        default = 0
+    return max(0, int(default))
 
 
 def fetch_categories(active_only=True):
@@ -674,16 +677,48 @@ def index():
 @app.get("/checkout")
 def checkout():
     store_number = get_setting("whatsapp_number", STORE_WHATSAPP_NUMBER)
-    return render_template("checkout.html", app_name=APP_NAME, store_whatsapp=store_number, is_admin=is_admin_logged_in())
+
+    # envia pro template as regras atuais de frete
+    try:
+        freight_default_cents = int(get_setting("freight_default_cents", "0") or "0")
+    except Exception:
+        freight_default_cents = 0
+    try:
+        freight_free_over_cents = int(get_setting("freight_free_over_cents", "0") or "0")
+    except Exception:
+        freight_free_over_cents = 0
+
+    # lista de bairros (pra sugerir no input)
+    fmap = load_freight_map()
+    bairros = sorted({k.title() for k in fmap.keys() if k})
+
+    return render_template(
+        "checkout.html",
+        app_name=APP_NAME,
+        store_whatsapp=store_number,
+        is_admin=is_admin_logged_in(),
+        freight_default_cents=freight_default_cents,
+        freight_free_over_cents=freight_free_over_cents,
+        freight_bairros=bairros,
+    )
 
 
-# ===== FRETE API (NOVO) =====
-@app.post("/api/shipping_quote")
-def api_shipping_quote():
-    data = request.get_json(force=True) or {}
-    address = (data.get("address") or "").strip()
-    fee = calc_shipping_fee_cents(address)
-    return jsonify({"fee_cents": fee, "fee_text": money_br(fee)})
+@app.post("/api/freight_quote")
+def api_freight_quote():
+    data = request.get_json(force=True)
+    bairro = (data.get("bairro") or "").strip()
+    try:
+        cart_total_cents = int(data.get("cart_total_cents") or 0)
+    except Exception:
+        cart_total_cents = 0
+
+    freight_cents = compute_freight_cents(bairro, cart_total_cents)
+    return jsonify(
+        {
+            "freight_cents": freight_cents,
+            "freight_text": money_br(freight_cents),
+        }
+    )
 
 
 @app.post("/api/whatsapp_link")
@@ -691,17 +726,11 @@ def api_whatsapp_link():
     data = request.get_json(force=True)
     customer_name = (data.get("customer_name") or "").strip()
     address = (data.get("address") or "").strip()
+    bairro = (data.get("bairro") or "").strip()
     phone = (data.get("phone") or "").strip()
     payment_method = (data.get("payment_method") or "").strip()
     change_for = (data.get("change_for") or "").strip()
     items = data.get("items") or []
-
-    # frete vindo do checkout (NOVO)
-    try:
-        shipping_fee_cents = int(data.get("shipping_fee_cents") or 0)
-    except Exception:
-        shipping_fee_cents = 0
-    shipping_fee_cents = max(shipping_fee_cents, 0)
 
     if not customer_name or not address or not phone or not payment_method or not items:
         return jsonify({"error": "Dados incompletos."}), 400
@@ -721,21 +750,27 @@ def api_whatsapp_link():
     if not lines:
         return jsonify({"error": "Carrinho vazio."}), 400
 
+    # calcula frete baseado nas regras atuais
+    freight_cents = compute_freight_cents(bairro, total_cents)
+    grand_total = total_cents + freight_cents
+
     pay_line = payment_method
     if payment_method.lower() == "dinheiro" and change_for:
         pay_line += f" (troco para {change_for})"
 
-    total_with_shipping = total_cents + shipping_fee_cents
+    bairro_line = f"\n🏘️ *Bairro:* {bairro}" if bairro else ""
 
     msg = (
         f"🛒 *Pedido — {APP_NAME}*\n\n"
         f"👤 *Nome:* {customer_name}\n"
-        f"📍 *Endereço:* {address}\n"
+        f"📍 *Endereço:* {address}"
+        f"{bairro_line}\n"
         f"📞 *WhatsApp/Telefone:* {phone}\n"
         f"💳 *Pagamento:* {pay_line}\n\n"
         f"📦 *Itens:*\n" + "\n".join(lines) + "\n\n"
-        f"🚚 *Frete:* {money_br(shipping_fee_cents)}\n"
-        f"💰 *Total:* {money_br(total_with_shipping)}\n\n"
+        f"🧾 *Subtotal:* {money_br(total_cents)}\n"
+        f"🛵 *Frete:* {money_br(freight_cents)}\n"
+        f"💰 *Total:* {money_br(grand_total)}\n\n"
         f"✅ Pedido confirmado."
     )
 
@@ -787,6 +822,12 @@ def admin():
     products = fetch_products(active_only=False)
     categories = fetch_categories(active_only=True)
     store_number = get_setting("whatsapp_number", STORE_WHATSAPP_NUMBER)
+
+    # frete settings
+    freight_default_cents = int(get_setting("freight_default_cents", "0") or "0")
+    freight_free_over_cents = int(get_setting("freight_free_over_cents", "0") or "0")
+    freight_map_json = get_setting("freight_map_json", "{}") or "{}"
+
     return render_template(
         "admin.html",
         app_name=APP_NAME,
@@ -794,6 +835,9 @@ def admin():
         categories=categories,
         store_whatsapp=store_number,
         is_admin=is_admin_logged_in(),
+        freight_default=money_br(freight_default_cents),
+        freight_free_over=money_br(freight_free_over_cents),
+        freight_map_json=freight_map_json,
     )
 
 
@@ -810,53 +854,56 @@ def admin_update_whatsapp():
     return redirect(url_for("admin"))
 
 
-# ======= TELA DO FRETE (NOVO) =======
-@app.get("/admin/shipping")
+@app.post("/admin/settings/freight")
 @admin_required
-def admin_shipping():
-    default_fee_cents = get_setting_int("shipping_default_fee_cents", 0)
-    rules = load_shipping_rules()
-    return render_template(
-        "shipping.html",
-        app_name=APP_NAME,
-        default_fee=money_br(default_fee_cents),
-        default_fee_cents=default_fee_cents,
-        rules=rules,
-        is_admin=is_admin_logged_in(),
-    )
+def admin_update_freight():
+    """
+    Campos:
+      - freight_default (ex: 8,00)
+      - freight_free_over (ex: 60,00)
+      - freight_lines (linhas "Bairro = 8,00")
+    """
+    freight_default = (request.form.get("freight_default") or "").strip()
+    freight_free_over = (request.form.get("freight_free_over") or "").strip()
+    freight_lines = (request.form.get("freight_lines") or "").strip()
 
-
-@app.post("/admin/shipping/save")
-@admin_required
-def admin_shipping_save():
-    # frete padrão
-    default_fee_raw = (request.form.get("default_fee") or "").strip()
     try:
-        default_fee_cents = parse_price_to_cents(default_fee_raw)
+        default_cents = parse_price_to_cents(freight_default or "0")
     except Exception:
-        flash("Frete padrão inválido. Use ex: 5,00", "error")
-        return redirect(url_for("admin_shipping"))
+        default_cents = 0
 
-    # regras (arrays)
-    keywords = request.form.getlist("keyword[]")
-    fees = request.form.getlist("fee[]")
+    try:
+        free_over_cents = parse_price_to_cents(freight_free_over or "0")
+    except Exception:
+        free_over_cents = 0
 
-    new_rules = []
-    for kw, fee_raw in zip(keywords, fees):
-        kw = (kw or "").strip()
-        if not kw:
+    fmap = {}
+    # aceita linhas tipo:
+    # Centro = 6,00
+    # Nova Cidade=8,00
+    for line in freight_lines.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if "=" not in line:
+            continue
+        left, right = line.split("=", 1)
+        bairro = normalize_bairro(left.strip())
+        val = right.strip()
+        if not bairro:
             continue
         try:
-            fee_cents = parse_price_to_cents(fee_raw)
+            cents = parse_price_to_cents(val)
         except Exception:
-            fee_cents = 0
-        new_rules.append({"type": "contains", "keyword": kw, "fee_cents": max(int(fee_cents), 0)})
+            continue
+        fmap[bairro] = int(cents)
 
-    set_setting_int("shipping_default_fee_cents", max(int(default_fee_cents), 0))
-    set_setting("shipping_rules_json", json.dumps(new_rules, ensure_ascii=False))
+    set_setting("freight_default_cents", str(int(default_cents)))
+    set_setting("freight_free_over_cents", str(int(free_over_cents)))
+    set_setting("freight_map_json", json.dumps(fmap, ensure_ascii=False))
 
-    flash("Configurações de frete salvas!", "success")
-    return redirect(url_for("admin_shipping"))
+    flash("Regras de frete atualizadas!", "success")
+    return redirect(url_for("admin"))
 
 
 # ---- CATEGORIAS ----
@@ -970,6 +1017,7 @@ def admin_add():
     except Exception:
         category_id = None
 
+    # Primeiro cria o produto SEM imagem (pra ter o ID)
     db = get_db()
     if using_postgres():
         cur = db_execute(
@@ -995,6 +1043,7 @@ def admin_add():
 
     db_commit(db)
 
+    # Agora processa e salva imagem NO BANCO (se enviada)
     file = request.files.get("image_file")
     if file and file.filename:
         try:
