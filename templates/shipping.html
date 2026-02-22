@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h4 class="mb-0"><i class="bi bi-truck"></i> Admin — Frete</h4>
+    <div class="text-muted">Configure frete padrão e frete por localidade (palavras no endereço).</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-nc" href="{{ url_for('admin') }}">
+      <i class="bi bi-arrow-left"></i> Voltar ao Admin
+    </a>
+  </div>
+</div>
+
+<div class="nc-card p-3 mb-3">
+  <form method="post" action="{{ url_for('admin_shipping_save') }}" id="shipForm">
+
+    <div class="mb-3">
+      <label class="form-label fw-semibold">Frete padrão</label>
+      <div class="text-muted small mb-2">
+        Se nenhuma regra bater, esse valor será usado. Ex: <strong>5,00</strong>
+      </div>
+      <input class="form-control" name="default_fee" value="{{ default_fee.replace('R$','').strip() }}" placeholder="Ex: 5,00" required>
+    </div>
+
+    <hr class="my-3">
+
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+      <div>
+        <div class="fw-semibold">Regras por localidade</div>
+        <div class="text-muted small">Se o endereço contiver a palavra-chave, aplica o frete daquela regra.</div>
+      </div>
+      <button class="btn btn-primary" type="button" onclick="addRuleRow()">
+        <i class="bi bi-plus-circle"></i> Adicionar regra
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th style="min-width:260px;">Palavra-chave (ex: centro, catarina)</th>
+            <th style="min-width:140px;">Frete (ex: 7,00)</th>
+            <th class="text-end" style="width:120px;">Ação</th>
+          </tr>
+        </thead>
+        <tbody id="rulesBody">
+          {% for r in rules %}
+          <tr>
+            <td>
+              <input class="form-control" name="keyword[]" value="{{ r.keyword }}" placeholder="Ex: centro" required>
+            </td>
+            <td>
+              <input class="form-control" name="fee[]" value="{{ (r.fee_cents / 100.0)|round(2)|string|replace('.', ',') }}" placeholder="Ex: 3,00" required>
+            </td>
+            <td class="text-end">
+              <button class="btn btn-danger btn-sm" type="button" onclick="removeRow(this)">
+                <i class="bi bi-trash3"></i> Remover
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap mt-3">
+      <button class="btn btn-success px-4" type="submit">
+        <i class="bi bi-check2-circle"></i> Salvar Frete
+      </button>
+      <div class="text-muted small align-self-center">
+        Dica: escreva as palavras como as pessoas digitam no endereço (bairro, “centro”, “sete lagoas”, etc).
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  function removeRow(btn){
+    const tr = btn.closest("tr");
+    if(tr) tr.remove();
+  }
+
+  function addRuleRow(){
+    const body = document.getElementById("rulesBody");
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <input class="form-control" name="keyword[]" placeholder="Ex: centro" required>
+      </td>
+      <td>
+        <input class="form-control" name="fee[]" placeholder="Ex: 3,00" required>
+      </td>
+      <td class="text-end">
+        <button class="btn btn-danger btn-sm" type="button" onclick="removeRow(this)">
+          <i class="bi bi-trash3"></i> Remover
+        </button>
+      </td>
+    `;
+    body.appendChild(tr);
+  }
+</script>
+{% endblock %}
