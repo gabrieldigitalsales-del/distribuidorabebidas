@@ -13,7 +13,7 @@
     border: 1px solid rgba(0,0,0,.05);
   }
 
-  /* ✅ garante que o card do formulário fique acima de qualquer coisa do layout */
+  /* garante que o card do formulário fique acima de qualquer coisa do layout */
   #formCard{
     position: relative;
     z-index: 20;
@@ -76,7 +76,21 @@
     }
   }
 
-  /* ✅ garante que o input do troco seja “clicável” */
+  /* Frete box */
+  .totals-box{
+    border-top: 1px solid rgba(0,0,0,.08);
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  .totals-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding: 4px 0;
+  }
+
+  /* Campo troco sempre clicável */
   #changeWrap{
     position: relative;
     z-index: 30;
@@ -86,6 +100,11 @@
     z-index: 31;
     pointer-events: auto;
     touch-action: manipulation;
+  }
+
+  .ship-hint{
+    font-size: .85rem;
+    opacity: .9;
   }
 </style>
 
@@ -114,12 +133,17 @@
         <div class="mb-2">
           <label class="form-label">Endereço</label>
           <input class="form-control" id="address" placeholder="Rua, número, bairro..." required>
-          <div class="form-text">Endereço da loja: 📍 Av Prefeito Alberto Moura, 15 LJ 5, Sete Lagoas 35702272</div>
+          <div class="form-text">
+            Endereço da loja: 📍 Av Prefeito Alberto Moura, 15 LJ 5, Sete Lagoas 35702272
+          </div>
+          <div class="text-muted ship-hint mt-1">
+            <i class="bi bi-truck"></i> O frete é calculado pelo endereço.
+          </div>
         </div>
 
         <div class="mb-2">
           <label class="form-label">WhatsApp / Telefone</label>
-          <input class="form-control" id="phone" placeholder="(31) 99999-9999" required>
+          <input class="form-control" id="phone" placeholder="(31) 99999-9999" required inputmode="tel">
         </div>
 
         <div class="mb-2">
@@ -134,8 +158,6 @@
 
         <div class="mb-2" id="changeWrap" style="display:none;">
           <label class="form-label">Troco para quanto?</label>
-
-          <!-- ✅ Hack Android/Chrome: readonly -> remove no toque/foco e força teclado -->
           <input
             class="form-control"
             id="change_for"
@@ -143,7 +165,6 @@
             inputmode="decimal"
             autocomplete="off"
             placeholder="Ex: 100,00"
-            readonly
           >
         </div>
 
@@ -157,9 +178,23 @@
 
         <div id="cartList" class="mb-2"></div>
 
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          <div class="text-muted">Total</div>
-          <div class="fw-bold fs-5" id="totalText">R$ 0,00</div>
+        <!-- Totais (NOVO) -->
+        <div class="totals-box">
+          <div class="totals-row">
+            <div class="text-muted">Subtotal</div>
+            <div class="fw-semibold" id="subtotalText">R$ 0,00</div>
+          </div>
+          <div class="totals-row">
+            <div class="text-muted">
+              Frete
+              <span class="text-muted small" id="shipStatus"></span>
+            </div>
+            <div class="fw-semibold" id="shippingText">R$ 0,00</div>
+          </div>
+          <div class="totals-row">
+            <div class="text-muted">Total</div>
+            <div class="fw-bold fs-5" id="totalText">R$ 0,00</div>
+          </div>
         </div>
 
         <div class="cart-actions">
@@ -186,6 +221,11 @@
 <script>
   const CART_KEY = "nc_cart_v1";
 
+  // estado do frete
+  let SHIPPING_FEE_CENTS = 0;
+  let SUBTOTAL_CENTS = 0;
+  let shippingTimer = null;
+
   function loadCart(){
     try { return JSON.parse(localStorage.getItem(CART_KEY) || "{}"); }
     catch(e){ return {}; }
@@ -194,6 +234,8 @@
   function saveCart(cart){
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
     renderCart();
+    // quando muda carrinho, atualiza total
+    renderTotals();
   }
 
   function moneyBR(cents){
@@ -203,7 +245,10 @@
 
   function clearCart(){
     localStorage.removeItem(CART_KEY);
+    SHIPPING_FEE_CENTS = 0;
     renderCart();
+    renderTotals();
+    updateShippingLabelIdle();
   }
 
   function inc(id){
@@ -226,19 +271,20 @@
   function renderCart(){
     const cart = loadCart();
     const list = document.getElementById("cartList");
-    let total = 0;
+    let subtotal = 0;
 
     const entries = Object.values(cart);
     if(entries.length === 0){
       list.innerHTML = `<div class="text-muted">Seu carrinho está vazio.</div>`;
-      document.getElementById("totalText").textContent = moneyBR(0);
+      SUBTOTAL_CENTS = 0;
+      document.getElementById("subtotalText").textContent = moneyBR(0);
       return;
     }
 
     list.innerHTML = "";
     entries.forEach(it=>{
-      const subtotal = (it.qty || 0) * (it.price_cents || 0);
-      total += subtotal;
+      const subtotalItem = (it.qty || 0) * (it.price_cents || 0);
+      subtotal += subtotalItem;
 
       const row = document.createElement("div");
       row.className = "cart-item";
@@ -259,20 +305,20 @@
           </button>
         </div>
 
-        <div class="cart-price">${moneyBR(subtotal)}</div>
+        <div class="cart-price">${moneyBR(subtotalItem)}</div>
       `;
 
       list.appendChild(row);
     });
 
-    document.getElementById("totalText").textContent = moneyBR(total);
+    SUBTOTAL_CENTS = subtotal;
+    document.getElementById("subtotalText").textContent = moneyBR(SUBTOTAL_CENTS);
   }
 
-  function enableChangeInput(){
-    const input = document.getElementById("change_for");
-    if(!input) return;
-    input.removeAttribute("readonly");
-    input.focus({preventScroll: true});
+  function renderTotals(){
+    document.getElementById("shippingText").textContent = moneyBR(SHIPPING_FEE_CENTS);
+    const total = (SUBTOTAL_CENTS || 0) + (SHIPPING_FEE_CENTS || 0);
+    document.getElementById("totalText").textContent = moneyBR(total);
   }
 
   function toggleChange(){
@@ -282,16 +328,65 @@
 
     if(pm === "dinheiro"){
       wrap.style.display = "";
-      // mantém readonly até o toque (evita bloqueio de teclado no Android)
       if(input){
-        input.setAttribute("readonly", "readonly");
-        // dá um “empurrão” visual (não força teclado sozinho)
-        setTimeout(()=>{ input.scrollIntoView({behavior:"smooth", block:"center"}); }, 120);
+        // tenta focar (Android abre teclado quando é ação direta do usuário)
+        setTimeout(()=> input.focus(), 60);
       }
     } else {
       wrap.style.display = "none";
       if(input) input.value = "";
     }
+  }
+
+  function updateShippingLabelIdle(){
+    const status = document.getElementById("shipStatus");
+    if(status) status.textContent = "";
+  }
+
+  function updateShippingLabelLoading(){
+    const status = document.getElementById("shipStatus");
+    if(status) status.textContent = " (calculando...)";
+  }
+
+  function updateShippingLabelDone(){
+    const status = document.getElementById("shipStatus");
+    if(status) status.textContent = "";
+  }
+
+  async function quoteShippingNow(){
+    const address = (document.getElementById("address").value || "").trim();
+    if(!address){
+      SHIPPING_FEE_CENTS = 0;
+      renderTotals();
+      updateShippingLabelIdle();
+      return;
+    }
+
+    updateShippingLabelLoading();
+
+    try{
+      const res = await fetch("/api/shipping_quote", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({address})
+      });
+      const data = await res.json();
+      if(res.ok){
+        SHIPPING_FEE_CENTS = parseInt(data.fee_cents || 0, 10) || 0;
+      } else {
+        SHIPPING_FEE_CENTS = 0;
+      }
+    }catch(e){
+      SHIPPING_FEE_CENTS = 0;
+    }
+
+    updateShippingLabelDone();
+    renderTotals();
+  }
+
+  function debounceShipping(){
+    if(shippingTimer) clearTimeout(shippingTimer);
+    shippingTimer = setTimeout(()=> quoteShippingNow(), 450);
   }
 
   async function sendWhatsApp(){
@@ -309,13 +404,17 @@
       phone: (document.getElementById("phone").value || "").trim(),
       payment_method: (document.getElementById("payment_method").value || "").trim(),
       change_for: (document.getElementById("change_for").value || "").trim(),
-      items
+      items,
+      shipping_fee_cents: SHIPPING_FEE_CENTS  // ✅ NOVO: manda frete pro backend
     };
 
     if(!payload.customer_name || !payload.address || !payload.phone || !payload.payment_method || items.length === 0){
       alert("Preencha os dados e verifique o carrinho.");
       return;
     }
+
+    // garante que o frete está atualizado antes de enviar
+    await quoteShippingNow();
 
     const res = await fetch("/api/whatsapp_link", {
       method: "POST",
@@ -332,22 +431,19 @@
     window.location.href = data.link;
   }
 
-  // ✅ força foco no toque real do usuário (Android/Chrome)
-  document.addEventListener("click", (e)=>{
-    const el = e.target;
-    if(el && el.id === "change_for"){
-      enableChangeInput();
-    }
-  }, true);
+  // ✅ eventos
+  document.getElementById("address")?.addEventListener("input", debounceShipping);
+  document.getElementById("address")?.addEventListener("blur", quoteShippingNow);
 
-  document.addEventListener("touchend", (e)=>{
-    const el = e.target;
-    if(el && el.id === "change_for"){
-      enableChangeInput();
-    }
-  }, {capture:true, passive:true});
+  // quando clicar no campo do troco, foca (ajuda Android/Chrome)
+  document.getElementById("change_for")?.addEventListener("pointerdown", (e)=>{
+    // pointerdown costuma funcionar melhor no Android
+    setTimeout(()=> e.target.focus(), 0);
+  });
 
   toggleChange();
   renderCart();
+  renderTotals();
+  updateShippingLabelIdle();
 </script>
 {% endblock %}
