@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+<div class="d-flex align-items-center justify-content-between mb-3">
   <div>
     <h4 class="mb-0"><i class="bi bi-gear"></i> Admin — Produtos</h4>
     <div class="text-muted">Adicionar, editar e remover produtos.</div>
   </div>
-  <div class="d-flex gap-2 flex-wrap">
+  <div class="d-flex gap-2">
     <a class="btn btn-nc" href="{{ url_for('admin_categories') }}">
       <i class="bi bi-tags"></i> Categorias
     </a>
@@ -16,26 +16,18 @@
   </div>
 </div>
 
-<!-- ===== CONFIG WHATSAPP ===== -->
+<!-- CONFIG WHATSAPP -->
 <div class="nc-card p-3 mb-3">
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
     <div>
       <h6 class="mb-1"><i class="bi bi-whatsapp"></i> WhatsApp da loja</h6>
       <div class="text-muted small">
-        Use apenas números com DDI. Ex: <strong>5531999999999</strong>
+        Use apenas números (com DDI). Ex: <strong>5531999999999</strong>
       </div>
     </div>
-
-    <form class="d-flex gap-2 align-items-center flex-wrap" method="post" action="{{ url_for('admin_update_whatsapp') }}">
-      <input
-        class="form-control"
-        name="store_whatsapp"
-        style="min-width:260px"
-        value="{{ store_whatsapp }}"
-        placeholder="5531999999999"
-        inputmode="numeric"
-        required
-      >
+    <form class="d-flex gap-2 align-items-center" method="post" action="{{ url_for('admin_update_whatsapp') }}">
+      <input class="form-control" name="store_whatsapp" style="min-width:260px"
+             value="{{ store_whatsapp }}" placeholder="5531999999999" required>
       <button class="btn btn-primary">
         <i class="bi bi-check2-circle"></i> Salvar
       </button>
@@ -43,17 +35,52 @@
   </div>
 </div>
 
+<!-- ✅ FRETE (NOVO) -->
+<div class="nc-card p-3 mb-3">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h6 class="mb-1"><i class="bi bi-truck"></i> Regras de Frete</h6>
+      <div class="text-muted small">
+        Configure frete padrão, frete grátis por valor e frete por bairro (linha a linha).
+      </div>
+    </div>
+  </div>
+
+  <form class="mt-3" method="post" action="{{ url_for('admin_update_freight') }}">
+    <div class="row g-2">
+      <div class="col-12 col-md-4">
+        <label class="form-label">Frete padrão</label>
+        <input class="form-control" name="freight_default" value="{{ freight_default or 'R$ 0,00' }}" placeholder="8,00">
+        <div class="form-text">Ex: 8,00 (se bairro não estiver cadastrado)</div>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label">Frete grátis acima de</label>
+        <input class="form-control" name="freight_free_over" value="{{ freight_free_over or 'R$ 0,00' }}" placeholder="60,00">
+        <div class="form-text">Ex: 60,00 (0 = desativado)</div>
+      </div>
+
+      <div class="col-12 col-md-4 d-flex align-items-end">
+        <button class="btn btn-primary w-100">
+          <i class="bi bi-check2-circle"></i> Salvar Frete
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <label class="form-label">Frete por bairro (uma linha por bairro)</label>
+      <textarea class="form-control" name="freight_lines" rows="6" placeholder="Centro = 6,00&#10;Nova Cidade = 8,00">{% if freight_map_json %}{% set _m = freight_map_json | safe %}{% endif %}</textarea>
+      <div class="form-text">
+        Formato: <strong>Bairro = valor</strong> (Ex: <code>Centro = 6,00</code>)
+      </div>
+    </div>
+  </form>
+</div>
+
 <div class="row g-3">
-  <!-- ===== ADD ===== -->
   <div class="col-12 col-lg-5">
     <div class="nc-card p-3">
       <h6 class="mb-3"><i class="bi bi-plus-circle"></i> Adicionar produto</h6>
-
-      {% if not categories or categories|length == 0 %}
-        <div class="alert alert-warning mb-3">
-          Você ainda não tem categorias ativas. Crie em <a href="{{ url_for('admin_categories') }}">Categorias</a>.
-        </div>
-      {% endif %}
 
       <form method="post" action="{{ url_for('admin_add') }}" enctype="multipart/form-data">
         <div class="mb-2">
@@ -63,18 +90,18 @@
 
         <div class="mb-2">
           <label class="form-label">Descrição</label>
-          <input class="form-control" name="description" placeholder="Ex: Lata 473ml, bem gelada">
+          <input class="form-control" name="description">
         </div>
 
         <div class="row g-2">
           <div class="col-6">
             <label class="form-label">Preço (ex: 9,99)</label>
-            <input class="form-control" name="price" placeholder="9,99" inputmode="decimal" required>
+            <input class="form-control" name="price" required>
           </div>
 
           <div class="col-6">
             <label class="form-label">Categoria</label>
-            <select class="form-select" name="category_id" {% if not categories or categories|length == 0 %}disabled{% endif %} required>
+            <select class="form-select" name="category_id" required>
               {% for c in categories %}
                 <option value="{{ c.id }}">{{ c.name }}</option>
               {% endfor %}
@@ -88,119 +115,97 @@
         <div class="mt-2">
           <label class="form-label">Imagem do produto</label>
           <input type="file" class="form-control" name="image_file" accept="image/*">
-          <div class="form-text">Dica: imagens quadradas ficam mais bonitas no catálogo.</div>
         </div>
 
         <div class="row g-2 mt-2">
           <div class="col-6">
             <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="is_active" id="activeAdd" checked>
-              <label class="form-check-label" for="activeAdd">Ativo no catálogo</label>
+              <input class="form-check-input" type="checkbox" name="is_active" id="active" checked>
+              <label class="form-check-label" for="active">Ativo no catálogo</label>
             </div>
           </div>
-
           <div class="col-6">
             <div class="form-check">
-              <input class="form-check-input" type="checkbox" name="is_promo" id="promoAdd" onchange="togglePromoAdd()">
-              <label class="form-check-label" for="promoAdd">Em promoção</label>
+              <input class="form-check-input" type="checkbox" name="is_promo" id="promo" onchange="togglePromoAdd()">
+              <label class="form-check-label" for="promo">Em promoção</label>
             </div>
           </div>
         </div>
 
         <div class="mt-2" id="promoAddWrap" style="display:none;">
           <label class="form-label">Preço promocional (ex: 7,99)</label>
-          <input class="form-control" name="promo_price" id="promoPriceAdd" placeholder="7,99" inputmode="decimal">
+          <input class="form-control" name="promo_price" placeholder="7,99">
         </div>
 
-        <button class="btn btn-primary w-100 mt-3 py-2" {% if not categories or categories|length == 0 %}disabled{% endif %}>
+        <button class="btn btn-primary w-100 mt-3 py-2">
           <i class="bi bi-check2-circle"></i> Salvar
         </button>
       </form>
     </div>
   </div>
 
-  <!-- ===== LISTA ===== -->
   <div class="col-12 col-lg-7">
     <div class="nc-card p-3">
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-        <h6 class="mb-0"><i class="bi bi-box-seam"></i> Lista de produtos</h6>
-        <div class="text-muted small">
-          Total: <strong>{{ products|length }}</strong>
-        </div>
-      </div>
+      <h6 class="mb-3"><i class="bi bi-box-seam"></i> Lista de produtos</h6>
 
-      {% if not products or products|length == 0 %}
-        <div class="text-muted">Nenhum produto cadastrado ainda.</div>
-      {% else %}
-        <div class="table-responsive">
-          <table class="table align-middle">
-            <thead>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Promo</th>
+              <th>Status</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in products %}
               <tr>
-                <th style="min-width:220px;">Produto</th>
-                <th>Categoria</th>
-                <th style="min-width:120px;">Preço</th>
-                <th>Promo</th>
-                <th>Status</th>
-                <th class="text-end" style="min-width:160px;">Ações</th>
+                <td>
+                  <div class="fw-semibold">{{ p.name }}</div>
+                  <div class="text-muted small">{{ p.description }}</div>
+                </td>
+                <td><span class="badge badge-cat">{{ p.category }}</span></td>
+                <td>
+                  {% if p.is_promo %}
+                    <div class="text-muted small"><s>{{ p.price }}</s></div>
+                    <div class="fw-bold">{{ p.effective_price }}</div>
+                  {% else %}
+                    <div class="fw-bold">{{ p.price }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if p.is_promo %}
+                    <span class="badge text-bg-warning"><i class="bi bi-lightning-charge"></i> Promo</span>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if p.is_active %}
+                    <span class="badge text-bg-success">Ativo</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">Inativo</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-nc" href="{{ url_for('admin_edit', pid=p.id) }}">
+                    <i class="bi bi-pencil"></i> Editar
+                  </a>
+                  <form class="d-inline" method="post" action="{{ url_for('admin_delete', pid=p.id) }}"
+                        onsubmit="return confirm('Remover este produto?')">
+                    <button class="btn btn-sm btn-danger">
+                      <i class="bi bi-trash3"></i> Remover
+                    </button>
+                  </form>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {% for p in products %}
-                <tr>
-                  <td>
-                    <div class="fw-semibold">{{ p.name }}</div>
-                    <div class="text-muted small">{{ p.description }}</div>
-                  </td>
-
-                  <td>
-                    <span class="badge badge-cat">{{ p.category }}</span>
-                  </td>
-
-                  <td>
-                    {% if p.is_promo %}
-                      <div class="text-muted small"><s>{{ p.price }}</s></div>
-                      <div class="fw-bold">{{ p.effective_price }}</div>
-                    {% else %}
-                      <div class="fw-bold">{{ p.price }}</div>
-                    {% endif %}
-                  </td>
-
-                  <td>
-                    {% if p.is_promo %}
-                      <span class="badge text-bg-warning">
-                        <i class="bi bi-lightning-charge"></i> Promo
-                      </span>
-                    {% else %}
-                      <span class="text-muted">—</span>
-                    {% endif %}
-                  </td>
-
-                  <td>
-                    {% if p.is_active %}
-                      <span class="badge text-bg-success">Ativo</span>
-                    {% else %}
-                      <span class="badge text-bg-secondary">Inativo</span>
-                    {% endif %}
-                  </td>
-
-                  <td class="text-end">
-                    <a class="btn btn-sm btn-nc" href="{{ url_for('admin_edit', pid=p.id) }}">
-                      <i class="bi bi-pencil"></i> Editar
-                    </a>
-
-                    <form class="d-inline" method="post" action="{{ url_for('admin_delete', pid=p.id) }}"
-                          onsubmit="return confirm('Remover este produto?')">
-                      <button class="btn btn-sm btn-danger">
-                        <i class="bi bi-trash3"></i> Remover
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
 
     </div>
   </div>
@@ -212,25 +217,9 @@
 {{ super() }}
 <script>
   function togglePromoAdd(){
-    const promo = document.getElementById("promoAdd");
+    const promo = document.getElementById("promo");
     const wrap = document.getElementById("promoAddWrap");
-    const price = document.getElementById("promoPriceAdd");
-
-    if(!promo || !wrap) return;
-
-    if(promo.checked){
-      wrap.style.display = "";
-      if(price){
-        price.required = true;
-        setTimeout(()=> price.focus(), 80);
-      }
-    } else {
-      wrap.style.display = "none";
-      if(price){
-        price.required = false;
-        price.value = "";
-      }
-    }
+    wrap.style.display = promo.checked ? "" : "none";
   }
 </script>
 {% endblock %}
