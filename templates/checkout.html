@@ -71,10 +71,187 @@
         </div>
 
         <div class="mb-2">
-          <label class="form-label">Telefone / WhatsApp</label>
+          <label class="form-label">WhatsApp / Telefone</label>
           <input class="form-control" id="phone" placeholder="(31) 99999-9999" required>
         </div>
 
         <div class="mb-2">
-          <label class="form-label">Observação (opcional)</label>
-          <input
+          <label class="form-label">Forma de entrega</label>
+          <input class="form-control" value="Retirada no local" disabled>
+          <input type="hidden" id="delivery_mode" value="Retirada no local">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Pagamento</label>
+          <input class="form-control" value="Retirada no local" disabled>
+          <input type="hidden" id="payment_method" value="Retirada no local">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CARRINHO -->
+    <div class="col-12 col-lg-6">
+      <div class="checkout-card p-3">
+        <h6 class="mb-3"><i class="bi bi-cart-check"></i> Seu carrinho</h6>
+
+        <div id="cartList" class="mb-2"></div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div class="text-muted">Subtotal</div>
+          <div class="fw-bold fs-6" id="subtotalText">R$ 0,00</div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <div class="text-muted">Total</div>
+          <div class="fw-bold fs-5" id="totalText">R$ 0,00</div>
+        </div>
+
+        <div class="cart-actions">
+          <button class="btn btn-outline-secondary w-100" onclick="clearCart()">
+            <i class="bi bi-trash3"></i> Limpar
+          </button>
+
+          <button class="btn btn-success w-100" onclick="sendWhatsApp()">
+            <i class="bi bi-whatsapp"></i> Enviar Pedido
+          </button>
+        </div>
+
+        <div class="text-muted small mt-2">
+          Envia para: <strong id="storeNumberPreview">{{ store_whatsapp }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const CART_KEY = "nc_cart_v1";
+
+  function loadCart(){
+    try { return JSON.parse(localStorage.getItem(CART_KEY) || "{}"); }
+    catch(e){ return {}; }
+  }
+
+  function saveCart(cart){
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    renderCart();
+  }
+
+  function moneyBR(cents){
+    const v = (cents || 0) / 100.0;
+    return "R$ " + v.toFixed(2).replace(".", ",");
+  }
+
+  function clearCart(){
+    localStorage.removeItem(CART_KEY);
+    renderCart();
+  }
+
+  function inc(id){
+    const cart = loadCart();
+    const key = String(id);
+    if(!cart[key]) return;
+    cart[key].qty += 1;
+    saveCart(cart);
+  }
+
+  function dec(id){
+    const cart = loadCart();
+    const key = String(id);
+    if(!cart[key]) return;
+    cart[key].qty -= 1;
+    if(cart[key].qty <= 0) delete cart[key];
+    saveCart(cart);
+  }
+
+  function calcSubtotalCents(cart){
+    let total = 0;
+    Object.values(cart).forEach(it=>{
+      total += (it.qty || 0) * (it.price_cents || 0);
+    });
+    return total;
+  }
+
+  function renderCart(){
+    const cart = loadCart();
+    const list = document.getElementById("cartList");
+
+    const entries = Object.values(cart);
+    if(entries.length === 0){
+      list.innerHTML = `<div class="text-muted">Seu carrinho está vazio.</div>`;
+      document.getElementById("subtotalText").textContent = moneyBR(0);
+      document.getElementById("totalText").textContent = moneyBR(0);
+      return;
+    }
+
+    list.innerHTML = "";
+    entries.forEach(it=>{
+      const row = document.createElement("div");
+      row.className = "cart-item";
+
+      row.innerHTML = `
+        <div class="cart-info">
+          <div class="fw-semibold">${it.name || "Item"}</div>
+          <div class="text-muted small">${moneyBR(it.price_cents || 0)} cada</div>
+        </div>
+
+        <div class="qty-mini">
+          <button class="btn btn-sm btn-nc" onclick="dec(${it.id})">
+            <i class="bi bi-dash-lg"></i>
+          </button>
+          <span class="fw-bold">${it.qty || 0}</span>
+          <button class="btn btn-sm btn-nc" onclick="inc(${it.id})">
+            <i class="bi bi-plus-lg"></i>
+          </button>
+        </div>
+
+        <div class="cart-price">${moneyBR((it.qty||0)*(it.price_cents||0))}</div>
+      `;
+
+      list.appendChild(row);
+    });
+
+    const subtotal = calcSubtotalCents(cart);
+    document.getElementById("subtotalText").textContent = moneyBR(subtotal);
+    document.getElementById("totalText").textContent = moneyBR(subtotal);
+  }
+
+  async function sendWhatsApp(){
+    const cart = loadCart();
+    const items = Object.values(cart).filter(it=> (it.qty||0) > 0);
+
+    const payload = {
+      customer_name: (document.getElementById("customer_name").value || "").trim(),
+      phone: (document.getElementById("phone").value || "").trim(),
+      delivery_mode: "Retirada no local",
+      payment_method: "Retirada no local",
+      items
+    };
+
+    if(!payload.customer_name || !payload.phone || items.length === 0){
+      alert("Preencha nome, telefone e verifique o carrinho.");
+      return;
+    }
+
+    const res = await fetch("/api/whatsapp_link", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if(!res.ok){
+      alert(data.error || "Erro ao gerar link do WhatsApp.");
+      return;
+    }
+
+    window.location.href = data.link;
+  }
+
+  renderCart();
+</script>
+{% endblock %}
