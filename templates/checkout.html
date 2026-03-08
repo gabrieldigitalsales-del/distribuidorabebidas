@@ -67,12 +67,12 @@
 
         <div class="mb-2">
           <label class="form-label">Nome do cliente</label>
-          <input class="form-control" id="customer_name" placeholder="Seu nome" required>
+          <input class="form-control" id="customer_name" placeholder="Seu nome">
         </div>
 
         <div class="mb-2">
           <label class="form-label">WhatsApp / Telefone</label>
-          <input class="form-control" id="phone" placeholder="(31) 99999-9999" required>
+          <input class="form-control" id="phone" placeholder="(31) 99999-9999">
         </div>
 
         <div class="mb-2">
@@ -132,8 +132,11 @@
   const CART_KEY = "nc_cart_v1";
 
   function loadCart(){
-    try { return JSON.parse(localStorage.getItem(CART_KEY) || "{}"); }
-    catch(e){ return {}; }
+    try {
+      return JSON.parse(localStorage.getItem(CART_KEY) || "{}");
+    } catch(e){
+      return {};
+    }
   }
 
   function saveCart(cart){
@@ -170,7 +173,7 @@
 
   function calcSubtotalCents(cart){
     let total = 0;
-    Object.values(cart).forEach(it=>{
+    Object.values(cart).forEach(it => {
       total += (it.qty || 0) * (it.price_cents || 0);
     });
     return total;
@@ -189,7 +192,7 @@
     }
 
     list.innerHTML = "";
-    entries.forEach(it=>{
+    entries.forEach(it => {
       const row = document.createElement("div");
       row.className = "cart-item";
 
@@ -209,7 +212,7 @@
           </button>
         </div>
 
-        <div class="cart-price">${moneyBR((it.qty||0)*(it.price_cents||0))}</div>
+        <div class="cart-price">${moneyBR((it.qty || 0) * (it.price_cents || 0))}</div>
       `;
 
       list.appendChild(row);
@@ -222,34 +225,43 @@
 
   async function sendWhatsApp(){
     const cart = loadCart();
-    const items = Object.values(cart).filter(it=> (it.qty||0) > 0);
+    const items = Object.values(cart).filter(it => (it.qty || 0) > 0);
+
+    if(items.length === 0){
+      alert("Seu carrinho está vazio.");
+      return;
+    }
+
+    const customerName = (document.getElementById("customer_name").value || "").trim();
+    const phone = (document.getElementById("phone").value || "").trim();
 
     const payload = {
-      customer_name: (document.getElementById("customer_name").value || "").trim(),
-      phone: (document.getElementById("phone").value || "").trim(),
+      customer_name: customerName || "Não informado",
+      phone: phone || "Não informado",
       delivery_mode: "Retirada no local",
       payment_method: "Retirada no local",
       items
     };
 
-    if(!payload.customer_name || !payload.phone || items.length === 0){
-      alert("Preencha nome, telefone e verifique o carrinho.");
-      return;
+    try {
+      const res = await fetch("/api/whatsapp_link", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if(!res.ok){
+        alert(data.error || "Erro ao gerar link do WhatsApp.");
+        return;
+      }
+
+      window.location.href = data.link;
+    } catch (error) {
+      alert("Não foi possível enviar o pedido. Tente novamente.");
+      console.error(error);
     }
-
-    const res = await fetch("/api/whatsapp_link", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-    if(!res.ok){
-      alert(data.error || "Erro ao gerar link do WhatsApp.");
-      return;
-    }
-
-    window.location.href = data.link;
   }
 
   renderCart();
