@@ -724,16 +724,18 @@ def api_freight_quote():
 @app.post("/api/whatsapp_link")
 def api_whatsapp_link():
     data = request.get_json(force=True)
-    customer_name = (data.get("customer_name") or "").strip()
+
+    customer_name = (data.get("customer_name") or "").strip() or "Não informado"
     address = (data.get("address") or "").strip()
     bairro = (data.get("bairro") or "").strip()
-    phone = (data.get("phone") or "").strip()
-    payment_method = (data.get("payment_method") or "").strip()
+    phone = (data.get("phone") or "").strip() or "Não informado"
+    payment_method = (data.get("payment_method") or "").strip() or "Não informado"
+    delivery_mode = (data.get("delivery_mode") or "").strip() or "Não informado"
     change_for = (data.get("change_for") or "").strip()
     items = data.get("items") or []
 
-    if not customer_name or not address or not phone or not payment_method or not items:
-        return jsonify({"error": "Dados incompletos."}), 400
+    if not items:
+        return jsonify({"error": "Carrinho vazio."}), 400
 
     total_cents = 0
     lines = []
@@ -741,6 +743,7 @@ def api_whatsapp_link():
         qty = int(it.get("qty") or 0)
         if qty <= 0:
             continue
+
         price_cents = int(it.get("price_cents") or 0)
         name = (it.get("name") or "Item").strip()
         subtotal = qty * price_cents
@@ -750,20 +753,30 @@ def api_whatsapp_link():
     if not lines:
         return jsonify({"error": "Carrinho vazio."}), 400
 
-    # calcula frete baseado nas regras atuais
-    freight_cents = compute_freight_cents(bairro, total_cents)
+    retirada_local = delivery_mode.lower() == "retirada no local"
+
+    if retirada_local:
+        freight_cents = 0
+        address_text = "Retirada no local"
+        bairro_text = ""
+    else:
+        address_text = address or "Não informado"
+        bairro_text = bairro
+        freight_cents = compute_freight_cents(bairro_text, total_cents)
+
     grand_total = total_cents + freight_cents
 
     pay_line = payment_method
     if payment_method.lower() == "dinheiro" and change_for:
         pay_line += f" (troco para {change_for})"
 
-    bairro_line = f"\n🏘️ *Bairro:* {bairro}" if bairro else ""
+    bairro_line = f"\n🏘️ *Bairro:* {bairro_text}" if bairro_text else ""
 
     msg = (
         f"🛒 *Pedido — {APP_NAME}*\n\n"
         f"👤 *Nome:* {customer_name}\n"
-        f"📍 *Endereço:* {address}"
+        f"🚚 *Entrega:* {delivery_mode}\n"
+        f"📍 *Endereço:* {address_text}"
         f"{bairro_line}\n"
         f"📞 *WhatsApp/Telefone:* {phone}\n"
         f"💳 *Pagamento:* {pay_line}\n\n"
